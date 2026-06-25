@@ -1,0 +1,53 @@
+name: toswim
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: toswim_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ}
+      PGTZ: ${PGTZ}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - toswim_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - toswim_network
+
+  liquibase:
+    image: liquibase/liquibase:4.27.0
+    container_name: toswim_liquibase
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ./database/changelog:/liquibase/changelog
+    command: >
+      --url=jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      --username=${POSTGRES_USER}
+      --password=${POSTGRES_PASSWORD}
+      --changeLogFile=changelog/db.changelog-master.yaml
+      update
+    networks:
+      - toswim_network
+
+volumes:
+  toswim_pgdata:
+    name: toswim_pgdata
+
+networks:
+  toswim_network:
+    name: toswim_network
+    driver: bridge
