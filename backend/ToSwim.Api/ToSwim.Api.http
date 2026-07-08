@@ -1,0 +1,6 @@
+@ToSwim.Api_HostAddress = http://localhost:5064
+
+GET {{ToSwim.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

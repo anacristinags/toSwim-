@@ -1,0 +1,12 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=toswim_dev;Username=toswim_user;Password=;Timezone=America/Sao_Paulo"
+  },
+  "Jwt": {
+    "Key": "",
+    "Issuer": "toswim-api",
+    "Audience": "toswim-app",
+    "ExpiracaoHoras": 8
+  },
+  "TimeZone": "America/Sao_Paulo"
+}

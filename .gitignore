@@ -57,3 +57,10 @@ Desktop.ini
 .idea/
 *.swp
 *.swo
+
+# ================================
+# Backend — arquivos sensíveis
+# ================================
+backend/**/appsettings.Development.json
+backend/**/appsettings.*.json
+!backend/**/appsettings.json
