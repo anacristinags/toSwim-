@@ -10,10 +10,14 @@ public class ToSwimDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<ConfigPiscina> ConfigPiscinas => Set<ConfigPiscina>();
+    public DbSet<FichaBase> FichasBase => Set<FichaBase>();
+    public DbSet<SerieFicha> SeriesFicha => Set<SerieFicha>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfiguration(new UsuarioConfiguration());
         modelBuilder.ApplyConfiguration(new ConfigPiscinaConfiguration());
+        modelBuilder.ApplyConfiguration(new FichaBaseConfiguration());
+        modelBuilder.ApplyConfiguration(new SerieFichaConfiguration());
     }
 }
