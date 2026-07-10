@@ -20,5 +20,6 @@ public class ToSwimDbContext : DbContext
         modelBuilder.ApplyConfiguration(new ConfigPiscinaConfiguration());
         modelBuilder.ApplyConfiguration(new FichaBaseConfiguration());
         modelBuilder.ApplyConfiguration(new SerieFichaConfiguration());
+        modelBuilder.ApplyConfiguration(new MetaConfiguration());
     }
 }

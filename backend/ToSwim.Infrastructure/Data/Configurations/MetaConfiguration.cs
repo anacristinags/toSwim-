@@ -50,13 +50,13 @@ public class MetaConfiguration : IEntityTypeConfiguration<Meta>
         builder.Property(m => m.ModoAvaliacao)
             .HasColumnName("modo_avaliacao")
             .HasConversion<short>()
-            .HasDefaultValue(0)
+            .HasDefaultValue(ModoAvaliacaoMeta.Repeticao)
             .IsRequired();
 
         builder.Property(m => m.Status)
             .HasColumnName("status")
             .HasConversion<short>()
-            .HasDefaultValue(0)
+            .HasDefaultValue(StatusMeta.Ativa) 
             .IsRequired();
 
         builder.Property(m => m.DataInicio)
