@@ -12,6 +12,7 @@ public class ToSwimDbContext : DbContext
     public DbSet<ConfigPiscina> ConfigPiscinas => Set<ConfigPiscina>();
     public DbSet<FichaBase> FichasBase => Set<FichaBase>();
     public DbSet<SerieFicha> SeriesFicha => Set<SerieFicha>();
+    public DbSet<Meta> Metas => Set<Meta>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
