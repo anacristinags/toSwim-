@@ -1,12 +1,16 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using System.Text;
 using ToSwim.Api.Middleware;
 using ToSwim.Application.Interfaces;
 using ToSwim.Application.Services;
 using ToSwim.Application.Settings;
 using ToSwim.Infrastructure.Data;
+using ToSwim.Infrastructure.Data.Interceptors;
 using ToSwim.Infrastructure.Repositories;
 using ToSwim.Infrastructure.Repositories.Interfaces;
 
@@ -25,8 +29,12 @@ Environment.SetEnvironmentVariable("TZ", timeZoneId);
 // 2. INJEÇÃO DO DBCONTEXT (EF CORE)
 // ==========================================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddSingleton<AuditableEntityInterceptor>();
 builder.Services.AddDbContext<ToSwimDbContext>(options =>
-    options.UseNpgsql(connectionString));
+{
+    options.UseNpgsql(connectionString);
+    options.AddInterceptors(new AuditableEntityInterceptor());
+});
 
 // ==========================================
 // 3. CONFIGURAÇÃO DO JWT E AUTENTICAÇÃO
@@ -78,7 +86,33 @@ builder.Services.AddScoped<ISerieFichaService, SerieFichaService>();
 // ==========================================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Digite: Bearer {seu token JWT}"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -96,7 +130,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();

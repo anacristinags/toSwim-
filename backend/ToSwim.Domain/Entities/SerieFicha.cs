@@ -2,7 +2,7 @@ using ToSwim.Domain.Enums;
 
 namespace ToSwim.Domain.Entities;
 
-public class SerieFicha
+public class SerieFicha : IAuditable
 {
     public int CodSerieFicha { get; set; }
     public int CodFicha { get; set; }

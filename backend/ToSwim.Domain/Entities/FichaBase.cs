@@ -1,6 +1,6 @@
 namespace ToSwim.Domain.Entities;
 
-public class FichaBase
+public class FichaBase : IAuditable
 {
     public int CodFicha { get; set; }
     public int CodUsuario { get; set; }

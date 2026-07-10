@@ -2,7 +2,7 @@ using ToSwim.Domain.Enums;
 
 namespace ToSwim.Domain.Entities;
 
-public class ConfigPiscina
+public class ConfigPiscina : IAuditable
 {
     public int CodPiscina { get; set; }
     public int CodUsuario { get; set; }
