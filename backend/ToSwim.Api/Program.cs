@@ -76,6 +76,7 @@ builder.Services.AddScoped<IMetaRepository, MetaRepository>();
 builder.Services.AddScoped<ITreinoRepository, TreinoRepository>(); 
 builder.Services.AddScoped<ISerieTreinoRepository, SerieTreinoRepository>();
 builder.Services.AddScoped<IRepeticaoSerieTreinoRepository, RepeticaoSerieTreinoRepository>();
+builder.Services.AddScoped<ITreinoMetaRepository, TreinoMetaRepository>();
 
 // Serviços
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -87,6 +88,8 @@ builder.Services.AddScoped<ISerieFichaService, SerieFichaService>();
 builder.Services.AddScoped<IMetaService, MetaService>();
 builder.Services.AddScoped<ITreinoService, TreinoService>();
 builder.Services.AddScoped<IRepeticaoSerieTreinoService, RepeticaoSerieTreinoService>();
+builder.Services.AddScoped<ITreinoMetaService, TreinoMetaService>();
+builder.Services.AddScoped<IMetricasService, MetricasService>();
 
 // ==========================================
 // 5. CONTROLLERS E SWAGGER (SIMPLIFICADO)

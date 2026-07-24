@@ -16,6 +16,7 @@ public class ToSwimDbContext : DbContext
     public DbSet<Treino> Treinos => Set<Treino>(); 
     public DbSet<SerieTreino> SeriesTreino => Set<SerieTreino>();
     public DbSet<RepeticaoSerieTreino> RepeticoesSerieTreino => Set<RepeticaoSerieTreino>();
+    public DbSet<TreinoMeta> TreinosMetas => Set<TreinoMeta>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,5 +28,6 @@ public class ToSwimDbContext : DbContext
         modelBuilder.ApplyConfiguration(new TreinoConfiguration()); 
         modelBuilder.ApplyConfiguration(new SerieTreinoConfiguration());
         modelBuilder.ApplyConfiguration(new RepeticaoSerieTreinoConfiguration());
+        modelBuilder.ApplyConfiguration(new TreinoMetaConfiguration());
     }
 }
