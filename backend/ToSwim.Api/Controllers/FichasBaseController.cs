@@ -6,6 +6,9 @@ using ToSwim.Api.Extensions;
 
 namespace ToSwim.Api.Controllers;
 
+/// <summary>
+/// Controller responsável pelo gerenciamento de Fichas Base utilizadas como gabarito para os treinos.
+/// </summary>
 [ApiController]
 [Route("fichas-base")]
 [Authorize]
@@ -18,7 +21,9 @@ public class FichasBaseController : ControllerBase
         _fichaService = fichaService;
     }
 
-    /// <summary>Lista as fichas bases ativas do usuário</summary>
+    /// <summary>
+    /// Lista as fichas bases ativas do nadador autenticado.
+    /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<FichaBaseResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar()
@@ -28,7 +33,10 @@ public class FichasBaseController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>Retorna os detalhes de uma ficha base com suas séries</summary>
+    /// <summary>
+    /// Retorna os detalhes de uma ficha base específica do atleta com a listagem de suas séries.
+    /// </summary>
+    /// <param name="id">Código identificador da Ficha Base.</param>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(FichaBaseResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -39,7 +47,13 @@ public class FichasBaseController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>Cria uma nova ficha base (Valida limite de 5 ativas)</summary>
+    /// <summary>
+    /// Cria uma nova ficha base de treino de natação para o nadador.
+    /// </summary>
+    /// <remarks>
+    /// Regra de Negócio: Existe um limite de no máximo 5 fichas base ativas por usuário cadastrado.
+    /// </remarks>
+    /// <param name="dto">Dados para a criação da ficha base de treino.</param>
     [HttpPost]
     [ProducesResponseType(typeof(FichaBaseResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -50,7 +64,11 @@ public class FichasBaseController : ControllerBase
         return CreatedAtAction(nameof(ObterPorId), new { id = resultado.CodFicha }, resultado);
     }
 
-    /// <summary>Atualiza o cabeçalho de uma ficha</summary>
+    /// <summary>
+    /// Atualiza o cabeçalho de uma ficha base de treino existente.
+    /// </summary>
+    /// <param name="id">Código identificador da ficha.</param>
+    /// <param name="dto">Dados atualizados da ficha de natação.</param>
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(FichaBaseResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -61,7 +79,11 @@ public class FichasBaseController : ControllerBase
         return Ok(resultado);
     }
 
-    /// <summary>Altera o status da ficha (1 = Ativo, 0 = Inativo)</summary>
+    /// <summary>
+    /// Altera o status operacional da ficha base de treino (1 = Ativo, 0 = Inativo).
+    /// </summary>
+    /// <param name="id">Código identificador da ficha.</param>
+    /// <param name="novoStatus">Novo status desejado para o registro.</param>
     [HttpPut("{id}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -72,7 +94,13 @@ public class FichasBaseController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Deleta a ficha base (Inativa se houver histórico de treinos)</summary>
+    /// <summary>
+    /// Inativa ou deleta fisicamente uma Ficha Base.
+    /// </summary>
+    /// <remarks>
+    /// Se a ficha possuir treinos vinculados em seu histórico, ela é inativada logicamente (status = 0). Do contrário, é executado o DELETE físico.
+    /// </remarks>
+    /// <param name="id">Código identificador da ficha base.</param>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -83,7 +111,13 @@ public class FichasBaseController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>Duplica a ficha e todas as suas séries associadas</summary>
+    /// <summary>
+    /// Duplica uma Ficha Base existente criando uma cópia com a identificação '(Cópia)' e copiando todas as suas séries.
+    /// </summary>
+    /// <remarks>
+    /// Útil para criar novos treinos semelhantes sem violar a regra de limite de 5 fichas ativas.
+    /// </remarks>
+    /// <param name="id">Código identificador da Ficha de origem.</param>
     [HttpPost("{id}/duplicar")]
     [ProducesResponseType(typeof(FichaBaseResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

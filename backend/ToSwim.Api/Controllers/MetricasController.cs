@@ -9,6 +9,9 @@ using ToSwim.Api.Extensions;
 
 namespace ToSwim.Api.Controllers;
 
+/// <summary>
+/// Controller responsável por consolidar estatísticas, recordes pessoais e gráficos de desempenho do atleta.
+/// </summary>
 [Authorize]
 [ApiController]
 [Route("")]
@@ -21,6 +24,9 @@ public class MetricasController : ControllerBase
         _metricasService = metricasService;
     }
 
+    /// <summary>
+    /// Retorna o resumo operacional do nadador para exibição dos cards do Dashboard inicial.
+    /// </summary>
     [HttpGet("dashboard/resumo")]
     public async Task<ActionResult<DashboardResumoDto>> ObterResumo()
     {
@@ -29,6 +35,10 @@ public class MetricasController : ControllerBase
         return Ok(resumo);
     }
 
+    /// <summary>
+    /// Retorna os dados para geração do gráfico de linha com a evolução histórica de pace do nadador.
+    /// </summary>
+    /// <param name="nado">Filtro opcional para exibir a evolução de apenas um tipo de nado específico.</param>
     [HttpGet("metricas/pace-medio")]
     public async Task<ActionResult<IEnumerable<EvolucaoPaceDto>>> ObterEvolucaoPace([FromQuery] TipoNado? nado)
     {
@@ -37,6 +47,9 @@ public class MetricasController : ControllerBase
         return Ok(evolucao);
     }
 
+    /// <summary>
+    /// Retorna as melhores marcas pessoais (Recordes) do nadador por distância e tipo de nado.
+    /// </summary>
     [HttpGet("metricas/melhores-tempos")]
     public async Task<ActionResult<IEnumerable<RecordePessoalDto>>> ObterRecordes([FromQuery] TipoNado? nado, [FromQuery] int? distancia)
     {
@@ -45,6 +58,9 @@ public class MetricasController : ControllerBase
         return Ok(recordes);
     }
 
+    /// <summary>
+    /// Retorna o andamento gráfico detalhado do progresso de aproximação de uma meta de tempo específica.
+    /// </summary>
     [HttpGet("metas/{id:int}/progresso")]
     public async Task<ActionResult<ProgressoMetaDto>> ObterProgressoMeta(int id)
     {

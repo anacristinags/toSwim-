@@ -10,6 +10,9 @@ using ToSwim.Api.Extensions;
 
 namespace ToSwim.Api.Controllers;
 
+/// <summary>
+/// Controller responsável pelas consultas históricas de treinos antigos concluídos.
+/// </summary>
 [Authorize]
 [ApiController]
 [Route("historico/treinos")]
@@ -22,6 +25,9 @@ public class HistoricoController : ControllerBase
         _treinoService = treinoService;
     }
 
+    /// <summary>
+    /// Retorna o histórico paginado de treinos do nadador que foram marcados com status de Concluído.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TreinoResponseDto>>> ObterHistorico(
         [FromQuery] int pagina = 1,
@@ -33,6 +39,9 @@ public class HistoricoController : ControllerBase
         return Ok(treinos);
     }
 
+    /// <summary>
+    /// Retorna o detalhamento físico (séries, distâncias e velocidades) de um treino antigo já consolidado.
+    /// </summary>
     [HttpGet("{id:int}")]
     public async Task<ActionResult<TreinoResponseDto>> ObterDetalheHistorico(int id)
     {

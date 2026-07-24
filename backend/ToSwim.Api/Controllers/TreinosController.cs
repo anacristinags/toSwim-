@@ -6,10 +6,13 @@ using ToSwim.Application.DTOs.Treino;
 using ToSwim.Application.DTOs.SerieTreino;
 using ToSwim.Application.Interfaces;
 using ToSwim.Domain.Enums;
-using ToSwim.Api.Extensions; // Para ler o ID do usuário autenticado no token
+using ToSwim.Api.Extensions;
 
 namespace ToSwim.Api.Controllers;
 
+/// <summary>
+/// Controller responsável por gerenciar a execução dos treinos diários e suas séries realizadas.
+/// </summary>
 [Authorize]
 [ApiController]
 [Route("treinos")]
@@ -22,10 +25,12 @@ public class TreinosController : ControllerBase
         _treinoService = treinoService;
     }
 
-    // ==========================================
-    // 5. EXECUÇÃO DE TREINOS (/treinos)
-    // ==========================================
-
+    /// <summary>
+    /// Inicia a execução de um novo treino carregando a estrutura de uma Ficha Base existente.
+    /// </summary>
+    /// <remarks>
+    /// A estrutura original da ficha é clonada para proteger o histórico de alterações futuras.
+    /// </remarks>
     [HttpPost]
     public async Task<ActionResult<TreinoResponseDto>> Iniciar([FromBody] IniciarTreinoRequestDto dto)
     {
@@ -34,6 +39,9 @@ public class TreinosController : ControllerBase
         return CreatedAtAction(nameof(ObterPorId), new { id = novoTreino.CodTreino }, novoTreino);
     }
 
+    /// <summary>
+    /// Lista os treinos em andamento ou finalizados do nadador autenticado (com paginação).
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TreinoResponseDto>>> Listar(
         [FromQuery] StatusTreino? status,
@@ -45,6 +53,9 @@ public class TreinosController : ControllerBase
         return Ok(treinos);
     }
 
+    /// <summary>
+    /// Retorna os detalhes de um treino específico, incluindo suas séries.
+    /// </summary>
     [HttpGet("{id:int}")]
     public async Task<ActionResult<TreinoResponseDto>> ObterPorId(int id)
     {
@@ -53,6 +64,9 @@ public class TreinosController : ControllerBase
         return Ok(treino);
     }
 
+    /// <summary>
+    /// Atualiza os dados do cabeçalho de um treino que está em andamento.
+    /// </summary>
     [HttpPut("{id:int}")]
     public async Task<ActionResult<TreinoResponseDto>> Atualizar(int id, [FromBody] AtualizarTreinoRequestDto dto)
     {
@@ -61,6 +75,9 @@ public class TreinosController : ControllerBase
         return Ok(treinoAtualizado);
     }
 
+    /// <summary>
+    /// Conclui o treino consolidando automaticamente as distâncias, tempos totais e ritmos médios de todas as séries.
+    /// </summary>
     [HttpPut("{id:int}/finalizar")]
     public async Task<ActionResult<TreinoResponseDto>> Finalizar(int id)
     {
@@ -69,6 +86,9 @@ public class TreinosController : ControllerBase
         return Ok(treinoFinalizado);
     }
 
+    /// <summary>
+    /// Cancela o treino do dia.
+    /// </summary>
     [HttpPut("{id:int}/cancelar")]
     public async Task<ActionResult<TreinoResponseDto>> Cancelar(int id)
     {
@@ -77,10 +97,9 @@ public class TreinosController : ControllerBase
         return Ok(treinoCancelado);
     }
 
-    // ==========================================
-    // 6. SÉRIES DO TREINO EXECUTADO (/treinos/{id}/series)
-    // ==========================================
-
+    /// <summary>
+    /// Adiciona uma nova série de treino realizada de forma avulsa (fora do padrão inicial da ficha).
+    /// </summary>
     [HttpPost("{id:int}/series")]
     public async Task<ActionResult<SerieTreinoResponseDto>> AdicionarSerie(int id, [FromBody] SerieTreinoRequestDto dto)
     {
@@ -89,6 +108,9 @@ public class TreinosController : ControllerBase
         return CreatedAtAction(nameof(ObterSeriePorId), new { id, idSerie = novaSerie.CodSerieTreino }, novaSerie);
     }
 
+    /// <summary>
+    /// Lista as séries vinculadas ao treino informado.
+    /// </summary>
     [HttpGet("{id:int}/series")]
     public async Task<ActionResult<IEnumerable<SerieTreinoResponseDto>>> ListarSeries(int id)
     {
@@ -97,6 +119,9 @@ public class TreinosController : ControllerBase
         return Ok(series);
     }
 
+    /// <summary>
+    /// Retorna o detalhe de uma série executada específica do treino.
+    /// </summary>
     [HttpGet("{id:int}/series/{idSerie:int}")]
     public async Task<ActionResult<SerieTreinoResponseDto>> ObterSeriePorId(int id, int idSerie)
     {
@@ -105,6 +130,9 @@ public class TreinosController : ControllerBase
         return Ok(serie);
     }
 
+    /// <summary>
+    /// Atualiza os parâmetros físicos ou anotações de uma série de treino específica.
+    /// </summary>
     [HttpPut("{id:int}/series/{idSerie:int}")]
     public async Task<ActionResult<SerieTreinoResponseDto>> AtualizarSerie(int id, int idSerie, [FromBody] SerieTreinoRequestDto dto)
     {
@@ -113,6 +141,9 @@ public class TreinosController : ControllerBase
         return Ok(serieAtualizada);
     }
 
+    /// <summary>
+    /// Remove uma série executada do treino.
+    /// </summary>
     [HttpDelete("{id:int}/series/{idSerie:int}")]
     public async Task<IActionResult> RemoverSerie(int id, int idSerie)
     {

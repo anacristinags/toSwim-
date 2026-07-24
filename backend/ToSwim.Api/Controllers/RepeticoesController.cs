@@ -4,10 +4,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ToSwim.Application.DTOs.Repeticao;
 using ToSwim.Application.Interfaces;
-using ToSwim.Api.Extensions; // Para obter o ID do usuário através do JWT
+using ToSwim.Api.Extensions;
 
 namespace ToSwim.Api.Controllers;
 
+/// <summary>
+/// Controller responsável pelo controle fino das repetições/tiros individuais de cada série realizada.
+/// </summary>
 [Authorize]
 [ApiController]
 [Route("treinos/{idTreino:int}/series/{idSerie:int}/repeticoes")]
@@ -20,6 +23,9 @@ public class RepeticoesController : ControllerBase
         _repeticaoService = repeticaoService;
     }
 
+    /// <summary>
+    /// Registra uma nova repetição de tempo (volta ou tiro) na série de treino diário.
+    /// </summary>
     [HttpPost]
     public async Task<ActionResult<RepeticaoResponseDto>> Registrar(int idTreino, int idSerie, [FromBody] RepeticaoRequestDto dto)
     {
@@ -31,6 +37,9 @@ public class RepeticoesController : ControllerBase
             novaRepeticao);
     }
 
+    /// <summary>
+    /// Lista todos os tiros/voltas individuais registrados para a série.
+    /// </summary>
     [HttpGet]
     public async Task<ActionResult<IEnumerable<RepeticaoResponseDto>>> Listar(int idTreino, int idSerie)
     {
@@ -39,6 +48,9 @@ public class RepeticoesController : ControllerBase
         return Ok(repeticoes);
     }
 
+    /// <summary>
+    /// Retorna os dados de uma repetição de tiro específica.
+    /// </summary>
     [HttpGet("{idRep:int}")]
     public async Task<ActionResult<RepeticaoResponseDto>> ObterPorId(int idTreino, int idSerie, int idRep)
     {
@@ -47,6 +59,9 @@ public class RepeticoesController : ControllerBase
         return Ok(repeticao);
     }
 
+    /// <summary>
+    /// Atualiza os valores de distância ou tempo de uma repetição/tiro específico.
+    /// </summary>
     [HttpPut("{idRep:int}")]
     public async Task<ActionResult<RepeticaoResponseDto>> Atualizar(int idTreino, int idSerie, int idRep, [FromBody] RepeticaoRequestDto dto)
     {
@@ -55,6 +70,9 @@ public class RepeticoesController : ControllerBase
         return Ok(repeticaoAtualizada);
     }
 
+    /// <summary>
+    /// Remove o registro de uma repetição/tiro do sistema.
+    /// </summary>
     [HttpDelete("{idRep:int}")]
     public async Task<IActionResult> Remover(int idTreino, int idSerie, int idRep)
     {
