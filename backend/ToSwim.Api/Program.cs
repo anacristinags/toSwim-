@@ -73,6 +73,9 @@ builder.Services.AddScoped<IConfigPiscinaRepository, ConfigPiscinaRepository>();
 builder.Services.AddScoped<IFichaBaseRepository, FichaBaseRepository>();
 builder.Services.AddScoped<ISerieFichaRepository, SerieFichaRepository>();
 builder.Services.AddScoped<IMetaRepository, MetaRepository>();
+builder.Services.AddScoped<ITreinoRepository, TreinoRepository>(); 
+builder.Services.AddScoped<ISerieTreinoRepository, SerieTreinoRepository>();
+builder.Services.AddScoped<IRepeticaoSerieTreinoRepository, RepeticaoSerieTreinoRepository>();
 
 // Serviços
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -82,6 +85,8 @@ builder.Services.AddScoped<IConfigPiscinaService, ConfigPiscinaService>();
 builder.Services.AddScoped<IFichaBaseService, FichaBaseService>();
 builder.Services.AddScoped<ISerieFichaService, SerieFichaService>();
 builder.Services.AddScoped<IMetaService, MetaService>();
+builder.Services.AddScoped<ITreinoService, TreinoService>();
+builder.Services.AddScoped<IRepeticaoSerieTreinoService, RepeticaoSerieTreinoService>();
 
 // ==========================================
 // 5. CONTROLLERS E SWAGGER (SIMPLIFICADO)

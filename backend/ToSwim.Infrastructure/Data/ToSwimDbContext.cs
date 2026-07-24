@@ -13,6 +13,9 @@ public class ToSwimDbContext : DbContext
     public DbSet<FichaBase> FichasBase => Set<FichaBase>();
     public DbSet<SerieFicha> SeriesFicha => Set<SerieFicha>();
     public DbSet<Meta> Metas => Set<Meta>();
+    public DbSet<Treino> Treinos => Set<Treino>(); 
+    public DbSet<SerieTreino> SeriesTreino => Set<SerieTreino>();
+    public DbSet<RepeticaoSerieTreino> RepeticoesSerieTreino => Set<RepeticaoSerieTreino>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,5 +24,8 @@ public class ToSwimDbContext : DbContext
         modelBuilder.ApplyConfiguration(new FichaBaseConfiguration());
         modelBuilder.ApplyConfiguration(new SerieFichaConfiguration());
         modelBuilder.ApplyConfiguration(new MetaConfiguration());
+        modelBuilder.ApplyConfiguration(new TreinoConfiguration()); 
+        modelBuilder.ApplyConfiguration(new SerieTreinoConfiguration());
+        modelBuilder.ApplyConfiguration(new RepeticaoSerieTreinoConfiguration());
     }
 }
