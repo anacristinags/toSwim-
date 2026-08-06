@@ -17,7 +17,7 @@ public class SerieFichaConfiguration : IEntityTypeConfiguration<SerieFicha>
         builder.Property(s => s.TipoNado).HasColumnName("tipo_nado").IsRequired();
         builder.Property(s => s.QuantidadeRepeticoes).HasColumnName("quantidade_repeticoes").IsRequired();
         builder.Property(s => s.DistanciaM).HasColumnName("distancia_m").IsRequired();
-        builder.Property(s => s.TempoPausaSeg).HasColumnName("tempo_pausa_seg").IsRequired();
+        builder.Property(s => s.TempoPausaSeg).HasColumnName("tempo_pausa_seg").HasColumnType("numeric(10,2)").IsRequired();
         builder.Property(s => s.IsGoalSeries).HasColumnName("is_goal_series").IsRequired();
         builder.Property(s => s.Observacoes).HasColumnName("observacoes");
         builder.Property(s => s.CreatedAt).HasColumnName("created_at").IsRequired();

@@ -14,19 +14,24 @@ namespace ToSwim.Application.Services;
 public class MetaService : IMetaService
 {
     private readonly IMetaRepository _metaRepository;
-    private readonly ISerieFichaRepository _serieFichaRepository; // Necess·rio para validar se a sÈrie existe
+    private readonly ISerieFichaRepository _serieFichaRepository;
+    private readonly IFichaBaseRepository _fichaBaseRepository; 
 
-    public MetaService(IMetaRepository metaRepository, ISerieFichaRepository serieFichaRepository)
+    public MetaService(
+        IMetaRepository metaRepository,
+        ISerieFichaRepository serieFichaRepository,
+        IFichaBaseRepository fichaBaseRepository)
     {
         _metaRepository = metaRepository;
         _serieFichaRepository = serieFichaRepository;
+        _fichaBaseRepository = fichaBaseRepository;
     }
 
     public async Task<MetaResponseDto> ObterPorIdAsync(int codMeta, int codUsuario)
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta n„o encontrada ou n„o pertence a este usu·rio.", 404);
+            throw new AppException("Meta nùo encontrada ou nùo pertence a este usuùrio.", 404);
 
         return MapearParaDto(meta);
     }
@@ -42,23 +47,23 @@ public class MetaService : IMetaService
         // 1. Validar se a serie_ficha existe
         var serie = await _serieFichaRepository.BuscarPorIdAsync(dto.CodSerieFicha);
         if (serie == null)
-            throw new AppException("A sÈrie de ficha informada n„o existe.", 404);
+            throw new AppException("A sùrie de ficha informada nùo existe.", 404);
 
-        // 2. Validar se j· existe uma meta ativa vinculada a essa sÈrie
+        var fichaDona = await _fichaBaseRepository.BuscarPorIdAsync(serie.CodFicha, codUsuario);
+        if (fichaDona == null)
+            throw new AppException("A sùrie de ficha informada nùo pertence ao usuùrio autenticado.", 403);
+
         var existeMetaAtiva = await _metaRepository.ExisteMetaAtivaParaSerieAsync(codUsuario, dto.CodSerieFicha);
         if (existeMetaAtiva)
-            throw new AppException("J· existe uma meta ativa associada a esta sÈrie de treino.", 400);
+            throw new AppException("Jù existe uma meta ativa associada a esta sùrie de treino.", 400);
 
-        // 3. Validar valores do alvo
         if (dto.DistanciaAlvoM <= 0)
-            throw new AppException("A dist‚ncia alvo deve ser maior que zero.", 400);
+            throw new AppException("A distùncia alvo deve ser maior que zero.", 400);
         if (dto.TempoAlvoSeg <= 0)
             throw new AppException("O tempo alvo deve ser maior que zero.", 400);
 
-        // 4. Calcular o Pace Alvo (segundos por 100m)
-        int paceCalculado = CalcularPace(dto.DistanciaAlvoM, dto.TempoAlvoSeg);
+        decimal paceCalculado = CalcularPace(dto.DistanciaAlvoM, dto.TempoAlvoSeg);
 
-        // 5. Instanciar a Meta garantindo datas em UTC
         var novaMeta = new Meta
         {
             CodUsuario = codUsuario,
@@ -85,13 +90,13 @@ public class MetaService : IMetaService
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta n„o encontrada.", 404);
+            throw new AppException("Meta nùo encontrada.", 404);
 
         if (meta.Status != StatusMeta.Ativa)
             throw new AppException("Apenas metas ativas podem ser editadas.", 400);
 
         if (dto.DistanciaAlvoM <= 0 || dto.TempoAlvoSeg <= 0)
-            throw new AppException("Dist‚ncia e tempo alvo devem ser maiores que zero.", 400);
+            throw new AppException("Distùncia e tempo alvo devem ser maiores que zero.", 400);
 
         // Atualizar dados e recalcular o Pace Alvo
         meta.TituloMeta = dto.TituloMeta;
@@ -114,7 +119,7 @@ public class MetaService : IMetaService
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta n„o encontrada.", 404);
+            throw new AppException("Meta nùo encontrada.", 404);
 
         meta.Status = novoStatus;
 
@@ -128,19 +133,16 @@ public class MetaService : IMetaService
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta n„o encontrada.", 404);
+            throw new AppException("Meta nùo encontrada.", 404);
 
-        // Regra do banco de dados/migrations: FKs com RESTRICT ou CASCADE. 
-        // Permite remoÁ„o fÌsica direta, mas caso haja vÌnculos ativos com o histÛrico que causem restriÁ„o de banco, o EF retornar· exceÁ„o de integridade.
         _metaRepository.Remover(meta);
         await _metaRepository.SalvarAlteracoesAsync();
     }
 
-    // C·lculo matem·tico do Pace do Nadador baseado em segundos por 100 metros
-    private static int CalcularPace(int distanciaMetros, int tempoSegundos)
+    private static decimal CalcularPace(int distanciaMetros, decimal tempoSegundos)
     {
-        if (distanciaMetros == 0) return 0;
-        return (int)Math.Round((double)tempoSegundos * 100 / distanciaMetros);
+        if (distanciaMetros == 0) return 0m;
+        return Math.Round(tempoSegundos * 100m / distanciaMetros, 2);
     }
 
     private static MetaResponseDto MapearParaDto(Meta meta)

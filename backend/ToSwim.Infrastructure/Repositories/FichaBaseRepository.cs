@@ -52,19 +52,23 @@ public class FichaBaseRepository : IFichaBaseRepository
 
     public async Task DeletarLogicamenteAsync(FichaBase ficha)
     {
-        ficha.Status = 0; // Desativa a ficha
+        ficha.Status = 0; 
         _context.FichasBase.Update(ficha);
         await _context.SaveChangesAsync();
     }
 
-    public async Task<bool> TemTreinosVinculadosAsync(int codFicha)
+    public async Task<bool> TemVinculosQueImpedemExclusaoAsync(int codFicha)
     {
-        // Usamos EF.Property ou consulta direta para checar se existem execuções de treino.
-        // Como a tabela treino ainda não está mapeada no DbContext deste módulo, faremos consulta direta na tabela por SQL bruto provisoriamente
-        // para não quebrar a compilação agora.
         var conn = _context.Database.GetDbConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(1) FROM treino WHERE cod_ficha = @codFicha";
+
+        cmd.CommandText = @"
+            SELECT 
+                (SELECT COUNT(1) FROM treino WHERE cod_ficha = @codFicha) +
+                (SELECT COUNT(1) FROM meta m 
+                 INNER JOIN serie_ficha sf ON m.cod_serie_ficha = sf.cod_serie_ficha 
+                 WHERE sf.cod_ficha = @codFicha) AS total_vinculos";
+
         var param = cmd.CreateParameter();
         param.ParameterName = "@codFicha";
         param.Value = codFicha;
@@ -73,7 +77,7 @@ public class FichaBaseRepository : IFichaBaseRepository
         if (conn.State != System.Data.ConnectionState.Open)
             await conn.OpenAsync();
 
-        var count = (long)(await cmd.ExecuteScalarAsync() ?? 0);
+        var count = Convert.ToInt64(await cmd.ExecuteScalarAsync() ?? 0);
         return count > 0;
     }
 

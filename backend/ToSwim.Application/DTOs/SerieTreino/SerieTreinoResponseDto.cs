@@ -13,10 +13,10 @@ public class SerieTreinoResponseDto
     public TipoNado TipoNado { get; set; }
     public int QuantidadeRepeticoesPlanejada { get; set; }
     public int DistanciaPlanejadaM { get; set; }
-    public int TempoPausaSeg { get; set; }
-    public int? TempoTotalSeg { get; set; }
+    public decimal TempoPausaSeg { get; set; }
+    public decimal? TempoTotalSeg { get; set; }
     public int? DistanciaTotalM { get; set; }
-    public int? PaceMedioSeg { get; set; }
+    public decimal? PaceMedioSeg { get; set; }
     public string? Observacoes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

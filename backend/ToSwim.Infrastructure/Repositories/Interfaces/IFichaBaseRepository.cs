@@ -10,6 +10,6 @@ public interface IFichaBaseRepository
     Task<FichaBase> CriarAsync(FichaBase ficha);
     Task<FichaBase> AtualizarAsync(FichaBase ficha);
     Task DeletarLogicamenteAsync(FichaBase ficha);
-    Task<bool> TemTreinosVinculadosAsync(int codFicha);
+    Task<bool> TemVinculosQueImpedemExclusaoAsync(int codFicha);
     Task ExcluirFisicamenteAsync(FichaBase ficha);
 }

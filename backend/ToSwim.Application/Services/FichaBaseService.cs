@@ -84,9 +84,8 @@ public class FichaBaseService : IFichaBaseService
     {
         var ficha = await ObterFichaEValidarDonoAsync(codFicha, codUsuario);
 
-        // Se houver treinos vinculados (histórico), inativa a ficha em vez de apagá-la fisicamente
-        var possuiTreinos = await _fichaRepository.TemTreinosVinculadosAsync(codFicha);
-        if (possuiTreinos)
+        var possuiVinculos = await _fichaRepository.TemVinculosQueImpedemExclusaoAsync(codFicha);
+        if (possuiVinculos)
         {
             await _fichaRepository.DeletarLogicamenteAsync(ficha);
         }
@@ -107,7 +106,6 @@ public class FichaBaseService : IFichaBaseService
 
         var fichaOriginal = await ObterFichaEValidarDonoAsync(codFicha, codUsuario);
 
-        // Cria a cópia do cabeçalho
         var novaFicha = new FichaBase
         {
             CodUsuario = codUsuario,

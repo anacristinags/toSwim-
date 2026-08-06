@@ -8,7 +8,7 @@ public class RepeticaoResponseDto
     public int CodSerieTreino { get; set; }
     public short NumeroRepeticao { get; set; }
     public int DistanciaRealM { get; set; }
-    public int DuracaoSeg { get; set; }
-    public int? PaceSeg { get; set; }
+    public decimal DuracaoSeg { get; set; }
+    public decimal? PaceSeg { get; set; }
     public DateTime CreatedAt { get; set; }
 }

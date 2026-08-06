@@ -30,10 +30,12 @@ public class RepeticaoSerieTreinoConfiguration : IEntityTypeConfiguration<Repeti
 
         builder.Property(r => r.DuracaoSeg)
             .HasColumnName("duracao_seg")
+            .HasColumnType("numeric(10,2)")
             .IsRequired();
 
         builder.Property(r => r.PaceSeg)
-            .HasColumnName("pace_seg");
+            .HasColumnName("pace_seg")
+            .HasColumnType("numeric(10,2)");
 
         builder.Property(r => r.CreatedAt)
             .HasColumnName("created_at")

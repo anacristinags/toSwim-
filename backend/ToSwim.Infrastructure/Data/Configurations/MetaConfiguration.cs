@@ -41,10 +41,12 @@ public class MetaConfiguration : IEntityTypeConfiguration<Meta>
 
         builder.Property(m => m.TempoAlvoSeg)
             .HasColumnName("tempo_alvo_seg")
+            .HasColumnType("numeric(10,2)")
             .IsRequired();
 
         builder.Property(m => m.PaceAlvoSeg)
             .HasColumnName("pace_alvo_seg")
+            .HasColumnType("numeric(10,2)")
             .IsRequired();
 
         builder.Property(m => m.ModoAvaliacao)
@@ -86,7 +88,7 @@ public class MetaConfiguration : IEntityTypeConfiguration<Meta>
         builder.HasOne(m => m.Usuario)
             .WithMany()
             .HasForeignKey(m => m.CodUsuario)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(m => m.SerieFicha)
             .WithMany()

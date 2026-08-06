@@ -41,11 +41,12 @@ public class TreinoConfiguration : IEntityTypeConfiguration<Treino>
 
         builder.Property(t => t.DuracaoTotalSeg)
             .HasColumnName("duracao_total_seg")
-            .HasDefaultValue(0)
-            .IsRequired();
+            .HasColumnType("numeric(10,2)")
+            .HasDefaultValue(0).IsRequired();
 
         builder.Property(t => t.PaceMedioSeg)
-            .HasColumnName("pace_medio_seg");
+            .HasColumnName("pace_medio_seg")
+            .HasColumnType("numeric(10,2)");
 
         builder.Property(t => t.TamanhoPiscinaM)
             .HasColumnName("tamanho_piscina_m")
@@ -76,7 +77,7 @@ public class TreinoConfiguration : IEntityTypeConfiguration<Treino>
         builder.HasOne(t => t.Usuario)
             .WithMany()
             .HasForeignKey(t => t.CodUsuario)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(t => t.FichaBase)
             .WithMany()

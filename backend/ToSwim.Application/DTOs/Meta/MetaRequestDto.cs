@@ -9,7 +9,7 @@ public class MetaRequestDto
     public string TituloMeta { get; set; } = string.Empty;
     public TipoNado TipoNado { get; set; }
     public int DistanciaAlvoM { get; set; }
-    public int TempoAlvoSeg { get; set; }
+    public decimal TempoAlvoSeg { get; set; }
     public ModoAvaliacaoMeta ModoAvaliacao { get; set; }
     public DateTime DataInicio { get; set; } = DateTime.UtcNow;
     public DateTime? DataFimPrevista { get; set; }

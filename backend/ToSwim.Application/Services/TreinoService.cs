@@ -30,10 +30,10 @@ public class TreinoService : ITreinoService
 
     public async Task<TreinoResponseDto> IniciarTreinoAsync(int codUsuario, IniciarTreinoRequestDto dto)
     {
-        // 1. Obter a Ficha Base ativa com suas séries associadas
+        // 1. Obter a Ficha Base ativa com suas s?ries associadas
         var ficha = await _fichaBaseRepository.BuscarPorIdAsync(dto.CodFicha, codUsuario);
         if (ficha == null || ficha.Status != 1)
-            throw new AppException("Ficha base não encontrada ou inativa.", 404);
+            throw new AppException("Ficha base n?o encontrada ou inativa.", 404);
 
         if (dto.TamanhoPiscinaM != 25 && dto.TamanhoPiscinaM != 50)
             throw new AppException("O tamanho da piscina deve ser 25 ou 50 metros.", 400);
@@ -53,7 +53,7 @@ public class TreinoService : ITreinoService
         await _treinoRepository.AdicionarAsync(novoTreino);
         await _treinoRepository.SalvarAlteracoesAsync(); // Salva primeiro para gerar o CodTreino
 
-        // 3. Clonar e inserir as séries da ficha base na tabela de execução (serie_treino)
+        // 3. Clonar e inserir as s?ries da ficha base na tabela de execu??o (serie_treino)
         foreach (var serieFicha in ficha.Series.OrderBy(s => s.Ordem))
         {
             var novaSerieTreino = new SerieTreino
@@ -81,7 +81,7 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino não encontrado.", 404);
+            throw new AppException("Treino n?o encontrado.", 404);
 
         return MapearParaDto(treino);
     }
@@ -99,7 +99,7 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino não encontrado.", 404);
+            throw new AppException("Treino n?o encontrado.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
             throw new AppException("Apenas treinos em andamento podem ser atualizados.", 400);
@@ -121,19 +121,19 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino não encontrado.", 404);
+            throw new AppException("Treino n?o encontrado.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
-            throw new AppException("Este treino já está finalizado ou cancelado.", 400);
+            throw new AppException("Este treino j? est? finalizado ou cancelado.", 400);
 
-        // Calcular Consolidação de Dados em Lote (Distância Total, Duração Total, Pace Médio)
+        // Calcular Consolida??o de Dados em Lote (Dist?ncia Total, Dura??o Total, Pace M?dio)
         int distanciaAcumulada = 0;
-        int duracaoAcumulada = 0;
+        decimal duracaoAcumulada = 0m;
 
         foreach (var serie in treino.SeriesTreino)
         {
             distanciaAcumulada += serie.DistanciaTotalM ?? 0;
-            duracaoAcumulada += serie.TempoTotalSeg ?? 0;
+            duracaoAcumulada += serie.TempoTotalSeg ?? 0m;
         }
 
         treino.DistanciaTotalM = distanciaAcumulada;
@@ -142,7 +142,7 @@ public class TreinoService : ITreinoService
 
         if (distanciaAcumulada > 0 && duracaoAcumulada > 0)
         {
-            treino.PaceMedioSeg = (int)Math.Round((double)duracaoAcumulada * 100 / distanciaAcumulada);
+            treino.PaceMedioSeg = CalcularPace(distanciaAcumulada, duracaoAcumulada);
         }
 
         _treinoRepository.Atualizar(treino);
@@ -155,7 +155,7 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino não encontrado.", 404);
+            throw new AppException("Treino n?o encontrado.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
             throw new AppException("Apenas treinos em andamento podem ser cancelados.", 400);
@@ -169,21 +169,21 @@ public class TreinoService : ITreinoService
     }
 
     // ==========================================
-    // OPERAÇÕES DE SÉRIE DO TREINO
+    // OPERA??ES DE S?RIE DO TREINO
     // ==========================================
 
     public async Task<SerieTreinoResponseDto> AdicionarSerieAvulsaAsync(int codTreino, int codUsuario, SerieTreinoRequestDto dto)
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino não encontrado ou não pertence ao nadador.", 404);
+            throw new AppException("Treino n?o encontrado ou n?o pertence ao nadador.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
-            throw new AppException("Não é permitido adicionar séries a um treino já finalizado ou cancelado.", 400);
+            throw new AppException("N?o ? permitido adicionar s?ries a um treino j? finalizado ou cancelado.", 400);
 
         var ordemJaExiste = await _serieTreinoRepository.ExisteOrdemNoTreinoAsync(codTreino, dto.Ordem);
         if (ordemJaExiste)
-            throw new AppException($"Já existe uma série na ordem {dto.Ordem} para este treino.", 400);
+            throw new AppException($"J? existe uma s?rie na ordem {dto.Ordem} para este treino.", 400);
 
         var novaSerie = new SerieTreino
         {
@@ -202,7 +202,7 @@ public class TreinoService : ITreinoService
 
         if (dto.DistanciaTotalM.HasValue && dto.TempoTotalSeg.HasValue && dto.DistanciaTotalM > 0)
         {
-            novaSerie.PaceMedioSeg = (int)Math.Round((double)dto.TempoTotalSeg.Value * 100 / dto.DistanciaTotalM.Value);
+            novaSerie.PaceMedioSeg = CalcularPace(dto.DistanciaTotalM.Value, dto.TempoTotalSeg.Value);
         }
 
         await _serieTreinoRepository.AdicionarAsync(novaSerie);
@@ -221,7 +221,7 @@ public class TreinoService : ITreinoService
     {
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null)
-            throw new AppException("Série de treino não encontrada.", 404);
+            throw new AppException("S?rie de treino n?o encontrada.", 404);
 
         return MapearParaDto(serie);
     }
@@ -230,16 +230,16 @@ public class TreinoService : ITreinoService
     {
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null)
-            throw new AppException("Série de treino não encontrada.", 404);
+            throw new AppException("S?rie de treino n?o encontrada.", 404);
 
         if (serie.Treino!.Status != StatusTreino.Andamento)
-            throw new AppException("Não é permitido editar séries de um treino finalizado ou cancelado.", 400);
+            throw new AppException("N?o ? permitido editar s?ries de um treino finalizado ou cancelado.", 400);
 
         if (serie.Ordem != dto.Ordem)
         {
             var ordemJaExiste = await _serieTreinoRepository.ExisteOrdemNoTreinoAsync(serie.CodTreino, dto.Ordem);
             if (ordemJaExiste)
-                throw new AppException($"Já existe outra série na ordem {dto.Ordem} para este treino.", 400);
+                throw new AppException($"J? existe outra s?rie na ordem {dto.Ordem} para este treino.", 400);
         }
 
         serie.Ordem = dto.Ordem;
@@ -253,7 +253,7 @@ public class TreinoService : ITreinoService
 
         if (dto.DistanciaTotalM.HasValue && dto.TempoTotalSeg.HasValue && dto.DistanciaTotalM > 0)
         {
-            serie.PaceMedioSeg = (int)Math.Round((double)dto.TempoTotalSeg.Value * 100 / dto.DistanciaTotalM.Value);
+            serie.PaceMedioSeg = CalcularPace(dto.DistanciaTotalM.Value, dto.TempoTotalSeg.Value);
         }
         else
         {
@@ -270,10 +270,10 @@ public class TreinoService : ITreinoService
     {
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null)
-            throw new AppException("Série de treino não encontrada.", 404);
+            throw new AppException("S?rie de treino n?o encontrada.", 404);
 
         if (serie.Treino!.Status != StatusTreino.Andamento)
-            throw new AppException("Não é permitido excluir séries de um treino finalizado ou cancelado.", 400);
+            throw new AppException("N?o ? permitido excluir s?ries de um treino finalizado ou cancelado.", 400);
 
         _serieTreinoRepository.Remover(serie);
         await _serieTreinoRepository.SalvarAlteracoesAsync();
@@ -282,6 +282,12 @@ public class TreinoService : ITreinoService
     // ==========================================
     // MAPEARES PRIVADOS
     // ==========================================
+
+    private static decimal CalcularPace(int distanciaMetros, decimal tempoSegundos)
+    {
+        if (distanciaMetros == 0) return 0m;
+        return Math.Round(tempoSegundos * 100m / distanciaMetros, 2);
+    }
 
     private static TreinoResponseDto MapearParaDto(Treino t)
     {

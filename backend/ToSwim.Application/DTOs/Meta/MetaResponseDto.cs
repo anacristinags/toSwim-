@@ -11,8 +11,8 @@ public class MetaResponseDto
     public string TituloMeta { get; set; } = string.Empty;
     public TipoNado TipoNado { get; set; }
     public int DistanciaAlvoM { get; set; }
-    public int TempoAlvoSeg { get; set; }
-    public int PaceAlvoSeg { get; set; }
+    public decimal TempoAlvoSeg { get; set; }
+    public decimal PaceAlvoSeg { get; set; }
     public ModoAvaliacaoMeta ModoAvaliacao { get; set; }
     public StatusMeta Status { get; set; }
     public DateTime DataInicio { get; set; }

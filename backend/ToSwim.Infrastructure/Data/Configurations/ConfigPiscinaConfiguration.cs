@@ -21,7 +21,8 @@ public class ConfigPiscinaConfiguration : IEntityTypeConfiguration<ConfigPiscina
 
         builder.HasOne(p => p.Usuario)
             .WithMany()
-            .HasForeignKey(p => p.CodUsuario);
+            .HasForeignKey(p => p.CodUsuario)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(p => p.CodUsuario).IsUnique();
     }

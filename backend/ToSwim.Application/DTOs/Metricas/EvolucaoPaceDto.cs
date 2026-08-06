@@ -9,5 +9,5 @@ public class EvolucaoPaceDto
     public string TituloTreino { get; set; } = string.Empty;
     public TipoNado TipoNado { get; set; }
     public int DistanciaM { get; set; }
-    public int PaceSeg { get; set; }
+    public decimal PaceSeg { get; set; }
 }

@@ -45,17 +45,20 @@ public class SerieTreinoConfiguration : IEntityTypeConfiguration<SerieTreino>
 
         builder.Property(s => s.TempoPausaSeg)
             .HasColumnName("tempo_pausa_seg")
+            .HasColumnType("numeric(10,2)")
             .HasDefaultValue(0)
             .IsRequired();
 
         builder.Property(s => s.TempoTotalSeg)
-            .HasColumnName("tempo_total_seg");
+            .HasColumnName("tempo_total_seg")
+            .HasColumnType("numeric(10,2)");
 
         builder.Property(s => s.DistanciaTotalM)
             .HasColumnName("distancia_total_m");
 
         builder.Property(s => s.PaceMedioSeg)
-            .HasColumnName("pace_medio_seg");
+            .HasColumnName("pace_medio_seg")
+            .HasColumnType("numeric(10,2)");
 
         builder.Property(s => s.Observacoes)
             .HasColumnName("observacoes")

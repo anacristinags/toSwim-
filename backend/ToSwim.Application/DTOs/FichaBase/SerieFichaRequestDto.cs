@@ -22,7 +22,7 @@ public class SerieFichaRequestDto
 
     [Required(ErrorMessage = "O tempo de pausa é obrigatório")]
     [Range(0, 3600, ErrorMessage = "O tempo de pausa não pode ser negativo")]
-    public int TempoPausaSeg { get; set; }
+    public decimal TempoPausaSeg { get; set; }
 
     public bool IsGoalSeries { get; set; } = false;
 

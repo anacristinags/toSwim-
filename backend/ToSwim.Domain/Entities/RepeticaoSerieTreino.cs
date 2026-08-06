@@ -8,10 +8,9 @@ public class RepeticaoSerieTreino
     public int CodSerieTreino { get; set; }
     public short NumeroRepeticao { get; set; }
     public int DistanciaRealM { get; set; }
-    public int DuracaoSeg { get; set; }
-    public int? PaceSeg { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow; // Gerado no construtor
+    public decimal DuracaoSeg { get; set; } // int -> decimal
+    public decimal? PaceSeg { get; set; }   // int? -> decimal?
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Propriedades de Navegação Relacional
     public SerieTreino? SerieTreino { get; set; }
 }

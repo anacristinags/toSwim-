@@ -29,8 +29,8 @@ public class MetricasService : IMetricasService
 
         int totalTreinos = treinosConcluidos.Count;
         int totalMetros = treinosConcluidos.Sum(t => t.DistanciaTotalM);
-        int totalTempo = treinosConcluidos.Sum(t => t.DuracaoTotalSeg);
-        int? paceGeral = (totalMetros > 0) ? (int)Math.Round((double)totalTempo * 100 / totalMetros) : null;
+        decimal totalTempo = treinosConcluidos.Sum(t => t.DuracaoTotalSeg);
+        decimal? paceGeral = (totalMetros > 0) ? Math.Round(totalTempo * 100m / totalMetros, 2) : null;
 
         int metasAtivas = await _context.Metas.CountAsync(m => m.CodUsuario == codUsuario && m.Status == StatusMeta.Ativa);
         int metasConcluidas = await _context.Metas.CountAsync(m => m.CodUsuario == codUsuario && m.Status == StatusMeta.Concluida);
@@ -72,7 +72,7 @@ public class MetricasService : IMetricasService
             TituloTreino = s.Treino.TituloTreino,
             TipoNado = s.TipoNado,
             DistanciaM = s.DistanciaTotalM!.Value,
-            PaceSeg = s.PaceMedioSeg ?? (int)Math.Round((double)s.TempoTotalSeg!.Value * 100 / s.DistanciaTotalM.Value)
+            PaceSeg = s.PaceMedioSeg ?? CalcularPace(s.DistanciaTotalM.Value, s.TempoTotalSeg!.Value)
         });
     }
 
@@ -95,7 +95,7 @@ public class MetricasService : IMetricasService
 
         var series = await query.ToListAsync();
 
-        // Agrupar por nado e distância para extrair os recordes (menor tempo)
+        // Agrupar por nado e dist˜ncia para extrair os recordes (menor tempo)
         var recordes = series
             .GroupBy(s => new { s.TipoNado, s.DistanciaTotalM })
             .Select(g => {
@@ -105,7 +105,7 @@ public class MetricasService : IMetricasService
                     TipoNado = g.Key.TipoNado,
                     DistanciaM = g.Key.DistanciaTotalM!.Value,
                     TempoRecordeSeg = melhorSerie.TempoTotalSeg!.Value,
-                    PaceRecordeSeg = melhorSerie.PaceMedioSeg ?? (int)Math.Round((double)melhorSerie.TempoTotalSeg.Value * 100 / melhorSerie.DistanciaTotalM.Value),
+                    PaceRecordeSeg = melhorSerie.PaceMedioSeg ?? CalcularPace(melhorSerie.DistanciaTotalM!.Value, melhorSerie.TempoTotalSeg.Value),
                     DataConquista = melhorSerie.Treino!.DataTreino,
                     TituloTreino = melhorSerie.Treino.TituloTreino
                 };
@@ -124,7 +124,7 @@ public class MetricasService : IMetricasService
             .FirstOrDefaultAsync(m => m.CodMeta == codMeta && m.CodUsuario == codUsuario);
 
         if (meta == null)
-            throw new AppException("Meta não encontrada.", 404);
+            throw new AppException("Meta n˜o encontrada.", 404);
 
         // Obter todas as tentativas vinculadas a esta meta
         var vinculos = await _context.TreinosMetas
@@ -135,14 +135,14 @@ public class MetricasService : IMetricasService
             .ToListAsync();
 
         var historico = new List<EvolucaoPaceDto>();
-        int? melhorTempo = null;
-        int? melhorPace = null;
+        decimal? melhorTempo = null;
+        decimal? melhorPace = null;
 
         foreach (var v in vinculos)
         {
             if (v.SerieTreino != null && v.SerieTreino.TempoTotalSeg.HasValue && v.SerieTreino.DistanciaTotalM > 0)
             {
-                int pace = v.SerieTreino.PaceMedioSeg ?? (int)Math.Round((double)v.SerieTreino.TempoTotalSeg.Value * 100 / v.SerieTreino.DistanciaTotalM.Value);
+                decimal pace = v.SerieTreino.PaceMedioSeg ?? CalcularPace(v.SerieTreino.DistanciaTotalM.Value, v.SerieTreino.TempoTotalSeg.Value);
 
                 historico.Add(new EvolucaoPaceDto
                 {
@@ -164,13 +164,13 @@ public class MetricasService : IMetricasService
             }
         }
 
-        // Calcular percentual de aproximação do pace
+        // Calcular percentual de aproxima˜˜o do pace
         double percentual = 0.0;
         if (melhorPace.HasValue)
         {
-            // Ex: Se o pace alvo é 90s (1min30s) e meu melhor é 100s:
+            // Ex: Se o pace alvo ˜ 90s (1min30s) e meu melhor ˜ 100s:
             // Formula: (PaceAlvo / MelhorPace) * 100. Se bateu a meta, fica >= 100%
-            percentual = (double)meta.PaceAlvoSeg / melhorPace.Value * 100;
+            percentual = (double)meta.PaceAlvoSeg / (double)melhorPace.Value * 100;
             if (percentual > 100.0) percentual = 100.0;
             percentual = Math.Round(percentual, 2);
         }
@@ -187,5 +187,11 @@ public class MetricasService : IMetricasService
             PercentualAtingimento = percentual,
             HistoricoTentativas = historico.OrderBy(h => h.Data).ToList()
         };
+    }
+
+    private static decimal CalcularPace(int distanciaMetros, decimal tempoSegundos)
+    {
+        if (distanciaMetros == 0) return 0m;
+        return Math.Round(tempoSegundos * 100m / distanciaMetros, 2);
     }
 }

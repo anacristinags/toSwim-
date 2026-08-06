@@ -24,7 +24,7 @@ public class FichaBaseConfiguration : IEntityTypeConfiguration<FichaBase>
         builder.HasOne(f => f.Usuario)
             .WithMany()
             .HasForeignKey(f => f.CodUsuario)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(f => f.OrigemCopia)
             .WithMany()

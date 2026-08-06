@@ -8,7 +8,7 @@ public class SerieFichaResponseDto
     public short TipoNado { get; set; }
     public int QuantidadeRepeticoes { get; set; }
     public int DistanciaM { get; set; }
-    public int TempoPausaSeg { get; set; }
+    public decimal TempoPausaSeg { get; set; }
     public bool IsGoalSeries { get; set; }
     public string? Observacoes { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -13,8 +13,8 @@ public class TreinoResponseDto
     public string TituloTreino { get; set; } = string.Empty;
     public string? Observacao { get; set; }
     public int DistanciaTotalM { get; set; }
-    public int DuracaoTotalSeg { get; set; }
-    public int? PaceMedioSeg { get; set; }
+    public decimal DuracaoTotalSeg { get; set; }
+    public decimal? PaceMedioSeg { get; set; }
     public short TamanhoPiscinaM { get; set; }
     public DateTime DataTreino { get; set; }
     public StatusTreino Status { get; set; }
