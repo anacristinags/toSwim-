@@ -49,12 +49,30 @@
           to="/piscina"
         ></v-list-item>
 
-        <v-list-item
-          prepend-icon="mdi-account-plus-outline"
-          title="Cadastro / Conta"
-          value="cadastro"
-          to="/cadastro"
-        ></v-list-item>
+        <template v-if="autenticado">
+          <v-list-item
+            prepend-icon="mdi-logout-variant"
+            title="Sair"
+            value="sair"
+            @click="sair"
+          ></v-list-item>
+        </template>
+
+        <template v-else>
+          <v-list-item
+            prepend-icon="mdi-login-variant"
+            title="Entrar"
+            value="login"
+            to="/login"
+          ></v-list-item>
+
+          <v-list-item
+            prepend-icon="mdi-account-plus-outline"
+            title="Criar Conta"
+            value="cadastro"
+            to="/cadastro"
+          ></v-list-item>
+        </template>
       </v-list>
     </v-navigation-drawer>
 
@@ -84,6 +102,15 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import authService from '@/services/authService'
+import { autenticado } from '@/services/tokenStorage'
 
+const router = useRouter()
 const drawer = ref(true)
+
+const sair = () => {
+  authService.logout()
+  router.push({ name: 'login' })
+}
 </script>

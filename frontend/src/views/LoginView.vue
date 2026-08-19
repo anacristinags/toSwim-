@@ -1,11 +1,11 @@
-﻿<template>
+<template>
   <v-container class="fill-height justify-center">
     <v-responsive max-width="480">
       <v-card class="pa-6 pa-md-8 elevation-4 rounded-lg">
         <div class="text-center mb-6">
-          <v-icon icon="mdi-account-plus" size="48" color="primary" class="mb-2"></v-icon>
-          <h1 class="text-h5 font-weight-bold text-primary">Criar Conta no toSwim</h1>
-          <p class="text-body-2 text-medium-emphasis">Cadastre-se para acompanhar sua performance na natação</p>
+          <v-icon icon="mdi-login-variant" size="48" color="primary" class="mb-2"></v-icon>
+          <h1 class="text-h5 font-weight-bold text-primary">Entrar no toSwim</h1>
+          <p class="text-body-2 text-medium-emphasis">Acesse sua conta para continuar seus treinos</p>
         </div>
 
         <v-alert
@@ -18,18 +18,7 @@
           {{ mensagemErro }}
         </v-alert>
 
-        <v-form v-model="formValido" @submit.prevent="cadastrar">
-          <v-text-field
-            v-model="nome"
-            label="Nome Completo"
-            prepend-inner-icon="mdi-account-outline"
-            variant="outlined"
-            density="comfortable"
-            class="mb-3"
-            :rules="[v => !!v || 'Nome é obrigatório']"
-            required
-          ></v-text-field>
-
+        <v-form v-model="formValido" @submit.prevent="entrar">
           <v-text-field
             v-model="email"
             label="E-mail"
@@ -54,26 +43,8 @@
             @click:append-inner="exibirSenha = !exibirSenha"
             variant="outlined"
             density="comfortable"
-            class="mb-3"
-            :rules="[
-              v => !!v || 'Senha é obrigatória',
-              v => v.length >= 6 || 'Mínimo de 6 caracteres'
-            ]"
-            required
-          ></v-text-field>
-
-          <v-text-field
-            v-model="confirmarSenha"
-            label="Confirmar Senha"
-            prepend-inner-icon="mdi-lock-check-outline"
-            :type="exibirSenha ? 'text' : 'password'"
-            variant="outlined"
-            density="comfortable"
             class="mb-4"
-            :rules="[
-              v => !!v || 'Confirmação de senha é obrigatória',
-              v => v === senha || 'As senhas não coincidem'
-            ]"
+            :rules="[v => !!v || 'Senha é obrigatória']"
             required
           ></v-text-field>
 
@@ -86,14 +57,14 @@
             :disabled="!formValido"
             :loading="carregando"
           >
-            Cadastrar Atleta
+            Entrar
           </v-btn>
         </v-form>
 
         <div class="text-center mt-6">
-          <span class="text-body-2 text-medium-emphasis">Já tem conta?</span>
-          <v-btn variant="text" color="primary" density="comfortable" to="/login">
-            Fazer login
+          <span class="text-body-2 text-medium-emphasis">Ainda não tem conta?</span>
+          <v-btn variant="text" color="primary" density="comfortable" to="/cadastro">
+            Criar conta
           </v-btn>
         </div>
       </v-card>
@@ -101,40 +72,38 @@
   </v-container>
 </template>
 
-
 <script setup lang="ts">
     import { ref } from 'vue'
-    import { useRouter } from 'vue-router'
+    import { useRoute, useRouter } from 'vue-router'
     import authService from '@/services/authService'
     import { extrairMensagemErro } from '@/services/erros'
 
     const router = useRouter()
+    const route = useRoute()
 
     const formValido = ref(false)
-    const nome = ref('')
     const email = ref('')
     const senha = ref('')
-    const confirmarSenha = ref('')
     const exibirSenha = ref(false)
     const carregando = ref(false)
     const mensagemErro = ref('')
 
-    const cadastrar = async () => {
+    const entrar = async () => {
         if (!formValido.value) return
 
         carregando.value = true
         mensagemErro.value = ''
 
         try {
-            await authService.cadastrar({
-                nome: nome.value,
+            await authService.login({
                 email: email.value,
                 senha: senha.value
             })
 
-            router.push('/piscina')
+            const destino = typeof route.query.redirect === 'string' ? route.query.redirect : '/fichas'
+            router.push(destino)
         } catch (error) {
-            mensagemErro.value = extrairMensagemErro(error, 'Não foi possível concluir o cadastro.')
+            mensagemErro.value = extrairMensagemErro(error, 'E-mail ou senha inválidos.')
         } finally {
             carregando.value = false
         }

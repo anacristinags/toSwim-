@@ -1,6 +1,5 @@
 ﻿<template>
   <v-container>
-    <!-- Cabeçalho -->
     <div class="mb-6">
       <h1 class="text-h5 font-weight-bold text-primary mb-1">
         <v-icon icon="mdi-history" class="mr-2"></v-icon>Historico de Treinos
@@ -10,8 +9,23 @@
       </p>
     </div>
 
-    <!-- Tabela / Lista de Treinos Concluídos -->
-    <v-card class="rounded-lg elevation-2">
+    <v-alert v-if="mensagem" :type="mensagem.tipo" variant="tonal" class="mb-4" density="compact">
+      {{ mensagem.texto }}
+    </v-alert>
+
+    <div v-if="carregando" class="text-center py-12">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </div>
+
+    <v-alert
+      v-else-if="historicoTreinos.length === 0"
+      type="info"
+      variant="tonal"
+    >
+      Nenhum treino concluido ainda. Finalize um treino na tela de Execucao.
+    </v-alert>
+
+    <v-card v-else class="rounded-lg elevation-2">
       <v-table hover>
         <thead>
           <tr>
@@ -24,18 +38,20 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="item in historicoTreinos" :key="item.id">
-            <td class="text-body-2 font-weight-medium">{{ item.data }}</td>
-            <td class="font-weight-bold text-primary">{{ item.titulo }}</td>
+          <tr v-for="item in historicoTreinos" :key="item.codTreino">
+            <td class="text-body-2 font-weight-medium">{{ formatarData(item.dataTreino) }}</td>
+            <td class="font-weight-bold text-primary">{{ item.tituloTreino }}</td>
             <td class="text-center">
               <v-chip size="small" color="info" variant="tonal">
-                {{ item.distanciaM }}m
+                {{ item.distanciaTotalM }}m
               </v-chip>
             </td>
-            <td class="text-center font-weight-medium">{{ item.tempoTotal }}</td>
+            <td class="text-center font-weight-medium">
+              {{ formatarDuracao(item.duracaoTotalSeg) }}
+            </td>
             <td class="text-center">
-              <v-chip size="small" color="accent" variant="tonal">
-                {{ item.paceMedio }} /100m
+              <v-chip size="small" color="primary" variant="tonal">
+                {{ formatarPace(item.paceMedioSeg) }} /100m
               </v-chip>
             </td>
             <td class="text-right">
@@ -44,7 +60,8 @@
                 variant="text"
                 color="primary"
                 density="comfortable"
-                @click="abrirDetalhes(item)"
+                :loading="carregandoDetalhe === item.codTreino"
+                @click="abrirDetalhes(item.codTreino)"
               ></v-btn>
             </td>
           </tr>
@@ -52,32 +69,37 @@
       </v-table>
     </v-card>
 
-    <!-- Modal Detalhes do Treino -->
     <v-dialog v-model="dialogDetalhes" max-width="600">
       <v-card v-if="treinoSelecionado" class="pa-6 rounded-lg">
         <v-card-title class="font-weight-bold text-primary px-0">
-          {{ treinoSelecionado.titulo }}
+          {{ treinoSelecionado.tituloTreino }}
         </v-card-title>
         <v-card-subtitle class="px-0 mb-4">
-          Realizado em {{ treinoSelecionado.data }}
+          Realizado em {{ formatarData(treinoSelecionado.dataTreino) }}
         </v-card-subtitle>
 
         <v-divider class="mb-4"></v-divider>
 
         <v-card-text class="px-0">
-          <h3 class="text-subtitle-2 font-weight-bold mb-3 text-medium-emphasis">Series Executadas</h3>
+          <h3 class="text-subtitle-2 font-weight-bold mb-3 text-medium-emphasis">
+            Series Executadas
+          </h3>
           <v-list density="compact" class="bg-surface rounded-lg">
-            <v-list-item v-for="(s, idx) in treinoSelecionado.series" :key="idx">
+            <v-list-item
+              v-for="(s, idx) in treinoSelecionado.seriesTreino"
+              :key="s.codSerieTreino"
+            >
               <template v-slot:prepend>
                 <v-avatar color="primary" size="24" class="text-caption mr-2">
-                  {{ idx + 1 }}
+                  {{ Number(idx) + 1 }}
                 </v-avatar>
               </template>
               <v-list-item-title class="font-weight-bold">
-                {{ s.repeticoes }}x {{ s.distanciaM }}m {{ s.nado }}
+                {{ s.quantidadeRepeticoesPlanejada }}x {{ s.distanciaPlanejadaM }}m
+                {{ nomeNado(s.tipoNado) }}
               </v-list-item-title>
               <v-list-item-subtitle>
-                Tempo acumulado: {{ s.tempoSerie }}
+                Tempo acumulado: {{ formatarDuracao(s.tempoTotalSeg) }}
               </v-list-item-subtitle>
             </v-list-item>
           </v-list>
@@ -92,39 +114,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import historicoService from '@/services/historicoService'
+import type { TreinoResponse } from '@/services/treinoService'
+import { extrairMensagemErro } from '@/services/erros'
+import { formatarData, formatarDuracao, formatarPace, nomeNado } from '@/services/formatacao'
 
 const dialogDetalhes = ref(false)
-const treinoSelecionado = ref<any>(null)
+const treinoSelecionado = ref<TreinoResponse | null>(null)
+const historicoTreinos = ref<TreinoResponse[]>([])
+const carregando = ref(false)
+const carregandoDetalhe = ref<number | null>(null)
+const mensagem = ref<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null)
 
-const historicoTreinos = ref([
-  {
-    id: 101,
-    data: '03/08/2026',
-    titulo: 'Treino A - Resistencia Crawl',
-    distanciaM: 2000,
-    tempoTotal: '48m 30s',
-    paceMedio: '01:24',
-    series: [
-      { repeticoes: 4, distanciaM: 200, nado: 'Crawl', tempoSerie: '12m 40s' },
-      { repeticoes: 8, distanciaM: 50, nado: 'Crawl', tempoSerie: '06m 10s' }
-    ]
-  },
-  {
-    id: 102,
-    data: '01/08/2026',
-    titulo: 'Treino B - Tecnica & Medley',
-    distanciaM: 1500,
-    tempoTotal: '38m 15s',
-    paceMedio: '01:32',
-    series: [
-      { repeticoes: 4, distanciaM: 100, nado: 'Medley', tempoSerie: '08m 20s' }
-    ]
+const carregarHistorico = async () => {
+  carregando.value = true
+  mensagem.value = null
+
+  try {
+    historicoTreinos.value = await historicoService.listar()
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel carregar o historico.')
+    }
+  } finally {
+    carregando.value = false
   }
-])
-
-const abrirDetalhes = (treino: any) => {
-  treinoSelecionado.value = treino
-  dialogDetalhes.value = true
 }
+
+const abrirDetalhes = async (codTreino: number) => {
+  carregandoDetalhe.value = codTreino
+  mensagem.value = null
+
+  try {
+    treinoSelecionado.value = await historicoService.obter(codTreino)
+    dialogDetalhes.value = true
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel abrir o detalhe do treino.')
+    }
+  } finally {
+    carregandoDetalhe.value = null
+  }
+}
+
+onMounted(carregarHistorico)
 </script>

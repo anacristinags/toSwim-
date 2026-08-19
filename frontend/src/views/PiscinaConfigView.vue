@@ -10,6 +10,16 @@
     </div>
 
     <v-card class="pa-6 rounded-lg elevation-2 mb-6">
+      <v-alert
+        v-if="mensagem"
+        :type="mensagem.tipo"
+        variant="tonal"
+        density="compact"
+        class="mb-6"
+      >
+        {{ mensagem.texto }}
+      </v-alert>
+
       <v-form @submit.prevent="salvarConfig">
         <h2 class="text-subtitle-1 font-weight-bold mb-4 text-primary">Tamanho da Piscina</h2>
         <v-radio-group v-model="tamanhoPiscinaM" inline class="mb-6">
@@ -49,6 +59,7 @@
             color="primary"
             size="large"
             prepend-icon="mdi-content-save"
+            :loading="carregando"
           >
             Salvar Configuracoes
           </v-btn>
@@ -59,12 +70,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+    import { ref, onMounted } from 'vue'
+    import piscinaService from '@/services/piscinaService'
+    import { extrairMensagemErro } from '@/services/erros'
 
-const tamanhoPiscinaM = ref<number>(25)
-const formaContagem = ref<number>(0)
+    const tamanhoPiscinaM = ref<number>(25)
+    const formaContagem = ref<number>(0)
+    const carregando = ref(false)
+    const possuiConfiguracao = ref(false)
+    const mensagem = ref<{ tipo: 'success' | 'error'; texto: string } | null>(null)
 
-const salvarConfig = () => {
-  alert('Configuracoes salvas estaticamente para piscina de ' + tamanhoPiscinaM.value + 'm!')
-}
+    onMounted(async () => {
+        try {
+            const config = await piscinaService.obterConfiguracao()
+
+            if (config) {
+                tamanhoPiscinaM.value = config.tamanhoM
+                formaContagem.value = config.formaContagem
+                possuiConfiguracao.value = true
+            }
+        } catch (error) {
+            mensagem.value = {
+                tipo: 'error',
+                texto: extrairMensagemErro(error, 'Nao foi possivel carregar a configuracao atual.')
+            }
+        }
+    })
+
+    const salvarConfig = async () => {
+        carregando.value = true
+        mensagem.value = null
+
+        const dados = {
+            tamanhoM: tamanhoPiscinaM.value,
+            formaContagem: formaContagem.value
+        }
+
+        try {
+            if (possuiConfiguracao.value) {
+                await piscinaService.atualizarConfiguracao(dados)
+            } else {
+                await piscinaService.criarConfiguracao(dados)
+                possuiConfiguracao.value = true
+            }
+
+            mensagem.value = { tipo: 'success', texto: 'Configuracoes da piscina salvas com sucesso!' }
+        } catch (error) {
+            mensagem.value = {
+                tipo: 'error',
+                texto: extrairMensagemErro(error, 'Erro ao salvar configuracao.')
+            }
+        } finally {
+            carregando.value = false
+        }
+    }
 </script>

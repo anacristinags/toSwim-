@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\ToSwim.Application\ToSwim.Application.csproj" />
@@ -20,6 +20,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	<NoWarn>$(NoWarn);1591</NoWarn>
+    <UserSecretsId>a68beeec-c9cf-474c-a734-f572e2b95ea5</UserSecretsId>
   </PropertyGroup>
 
 </Project>

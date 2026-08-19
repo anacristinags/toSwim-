@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models;
 using System.Text;
 using ToSwim.Api.Middleware;
 using ToSwim.Application.Interfaces;
@@ -26,9 +23,34 @@ var timeZoneId = builder.Configuration["TimeZone"] ?? "America/Sao_Paulo";
 Environment.SetEnvironmentVariable("TZ", timeZoneId);
 
 // ==========================================
-// 2. INJEÇÃO DO DBCONTEXT (EF CORE)
+// 2. CONFIGURAÇÃO DE CORS
+// ==========================================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowVueApp", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+// ==========================================
+// 3. INJEÇÃO DO DBCONTEXT (EF CORE)
 // ==========================================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' não foi configurada. " +
+        "Defina em appsettings.Development.json ou User Secrets.");
+}
+
 builder.Services.AddSingleton<AuditableEntityInterceptor>();
 builder.Services.AddDbContext<ToSwimDbContext>(options =>
 {
@@ -37,10 +59,38 @@ builder.Services.AddDbContext<ToSwimDbContext>(options =>
 });
 
 // ==========================================
-// 3. CONFIGURAÇÃO DO JWT E AUTENTICAÇÃO
+// 4. CONFIGURAÇÃO DO JWT E AUTENTICAÇÃO
 // ==========================================
+var jwtSection = builder.Configuration.GetSection("Jwt");
+
+if (!jwtSection.Exists())
+{
+    throw new InvalidOperationException(
+        "A seção 'Jwt' não foi encontrada na configuração da API.");
+}
+
 var jwtSettings = new JwtSettings();
-builder.Configuration.GetSection("Jwt").Bind(jwtSettings);
+jwtSection.Bind(jwtSettings);
+
+if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+{
+    throw new InvalidOperationException(
+        "A chave JWT não foi configurada. Defina 'Jwt:Key' usando User Secrets ou appsettings.");
+}
+
+if (Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
+{
+    throw new InvalidOperationException(
+        "A chave JWT deve possuir pelo menos 32 bytes.");
+}
+
+if (string.IsNullOrWhiteSpace(jwtSettings.Issuer) ||
+    string.IsNullOrWhiteSpace(jwtSettings.Audience))
+{
+    throw new InvalidOperationException(
+        "Jwt:Issuer e Jwt:Audience também precisam ser configurados.");
+}
+
 builder.Services.AddSingleton(jwtSettings);
 
 builder.Services.AddAuthentication(options =>
@@ -56,16 +106,18 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+
         ValidIssuer = jwtSettings.Issuer,
         ValidAudience = jwtSettings.Audience,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtSettings.Key))
     };
 });
 
 builder.Services.AddAuthorization();
 
 // ==========================================
-// 4. REGISTRO DOS REPOSITÓRIOS E SERVIÇOS
+// 5. REGISTRO DOS REPOSITÓRIOS E SERVIÇOS
 // ==========================================
 // Repositórios
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
@@ -73,7 +125,7 @@ builder.Services.AddScoped<IConfigPiscinaRepository, ConfigPiscinaRepository>();
 builder.Services.AddScoped<IFichaBaseRepository, FichaBaseRepository>();
 builder.Services.AddScoped<ISerieFichaRepository, SerieFichaRepository>();
 builder.Services.AddScoped<IMetaRepository, MetaRepository>();
-builder.Services.AddScoped<ITreinoRepository, TreinoRepository>(); 
+builder.Services.AddScoped<ITreinoRepository, TreinoRepository>();
 builder.Services.AddScoped<ISerieTreinoRepository, SerieTreinoRepository>();
 builder.Services.AddScoped<IRepeticaoSerieTreinoRepository, RepeticaoSerieTreinoRepository>();
 builder.Services.AddScoped<ITreinoMetaRepository, TreinoMetaRepository>();
@@ -92,7 +144,7 @@ builder.Services.AddScoped<ITreinoMetaService, TreinoMetaService>();
 builder.Services.AddScoped<IMetricasService, MetricasService>();
 
 // ==========================================
-// 5. CONTROLLERS E SWAGGER (SIMPLIFICADO)
+// 6. CONTROLLERS E SWAGGER
 // ==========================================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -122,6 +174,7 @@ builder.Services.AddSwaggerGen(options =>
             Array.Empty<string>()
         }
     });
+
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (System.IO.File.Exists(xmlPath))
@@ -133,7 +186,7 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // ==========================================
-// 6. MIDDLEWARES E PIPELINE DE EXECUÇÃO
+// 7. MIDDLEWARES E PIPELINE DE EXECUÇÃO
 // ==========================================
 app.UseMiddleware<ExceptionMiddleware>();
 
@@ -147,6 +200,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// O Cors deve ser ativado ANTES da autenticação
+app.UseCors("AllowVueApp");
 
 app.UseAuthentication();
 app.UseAuthorization();

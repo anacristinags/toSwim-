@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { estaAutenticado } from '@/services/tokenStorage'
 
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,9 +9,16 @@ const router = createRouter({
             redirect: '/fichas'
         },
         {
+            path: '/login',
+            name: 'login',
+            component: () => import('../views/LoginView.vue'),
+            meta: { publica: true }
+        },
+        {
             path: '/cadastro',
             name: 'cadastro',
-            component: () => import('../views/RegisterView.vue')
+            component: () => import('../views/RegisterView.vue'),
+            meta: { publica: true }
         },
         {
             path: '/piscina',
@@ -38,6 +46,16 @@ const router = createRouter({
             component: () => import('../views/HistoricoView.vue')
         }
     ]
+})
+
+router.beforeEach((to) => {
+    if (to.meta.publica) return true
+
+    if (!estaAutenticado()) {
+        return { name: 'login', query: { redirect: to.fullPath } }
+    }
+
+    return true
 })
 
 export default router

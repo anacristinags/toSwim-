@@ -9,122 +9,370 @@
       </p>
     </div>
 
-    <!-- Selecionar Ficha Base para Iniciar -->
-    <v-card v-if="!treinoEmAndamento" class="pa-6 rounded-lg elevation-2 mb-6">
-      <h2 class="text-subtitle-1 font-weight-bold text-primary mb-4">Escolha a Ficha para Treinar Hoje</h2>
-      <v-select
-        v-model="fichaSelecionada"
-        label="Selecione uma Ficha Base"
-        :items="opcoesFichas"
-        item-title="titulo"
-        item-value="id"
-        variant="outlined"
-        density="comfortable"
-        class="mb-4"
-        return-object
-      ></v-select>
+    <v-alert v-if="mensagem" :type="mensagem.tipo" variant="tonal" class="mb-4" density="compact">
+      {{ mensagem.texto }}
+    </v-alert>
 
-      <v-btn
-        color="primary"
-        size="large"
-        block
-        prepend-icon="mdi-swim"
-        :disabled="!fichaSelecionada"
-        @click="iniciarTreino"
-      >
-        Iniciar Treino na Piscina
-      </v-btn>
-    </v-card>
-
-    <!-- Painel do Treino em Andamento -->
-    <div v-else>
-      <v-card color="primary" variant="tonal" class="pa-6 rounded-lg mb-6">
-        <div class="d-flex justify-space-between align-center flex-wrap ga-4">
-          <div>
-            <div class="text-caption text-uppercase font-weight-bold">Treino em Andamento</div>
-            <h2 class="text-h5 font-weight-bold">{{ treinoAtivo.titulo }}</h2>
-          </div>
-
-          <div class="d-flex ga-3">
-            <v-btn color="error" variant="outlined" @click="cancelarTreino">
-              Cancelar
-            </v-btn>
-            <v-btn color="success" prepend-icon="mdi-check-circle" @click="finalizarTreino">
-              Finalizar Treino
-            </v-btn>
-          </div>
-        </div>
-      </v-card>
-
-      <!-- Execução das Séries -->
-      <v-card v-for="(serie, sIdx) in treinoAtivo.series" :key="sIdx" class="mb-6 pa-4 rounded-lg elevation-2">
-        <v-card-title class="d-flex justify-space-between align-center">
-          <span class="text-subtitle-1 font-weight-bold text-primary">
-            Serie {{ sIdx + 1 }}: {{ serie.repeticoes }}x {{ serie.distanciaM }}m - {{ serie.nado }}
-          </span>
-          <v-chip size="small" color="info">Pausa: {{ serie.pausaSeg }}s</v-chip>
-        </v-card-title>
-
-        <v-card-text>
-          <!-- Tiros/Voltas da Série -->
-          <v-row class="mt-2">
-            <v-col v-for="rIdx in serie.repeticoes" :key="rIdx" cols="12" sm="6" md="3">
-              <v-card variant="outlined" class="pa-3 text-center rounded-lg">
-                <div class="text-caption text-medium-emphasis mb-1">Tiro {{ rIdx }} ({{ serie.distanciaM }}m)</div>
-                <v-text-field
-                  v-model.number="serie.tiros[rIdx - 1]"
-                  label="Tempo (seg)"
-                  type="number"
-                  variant="filled"
-                  density="compact"
-                  hide-details
-                  suffix="s"
-                ></v-text-field>
-              </v-card>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
+    <div v-if="carregando" class="text-center py-12">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
+
+    <template v-else>
+      <v-card v-if="!treinoEmAndamento" class="pa-6 rounded-lg elevation-2 mb-6">
+        <h2 class="text-subtitle-1 font-weight-bold text-primary mb-4">
+          Escolha a Ficha para Treinar Hoje
+        </h2>
+
+        <v-alert
+          v-if="!tamanhoPiscinaM"
+          type="warning"
+          variant="tonal"
+          class="mb-4"
+          density="compact"
+        >
+          Configure o tamanho da piscina antes de iniciar um treino.
+          <v-btn variant="text" color="primary" density="comfortable" to="/piscina" class="ml-1">
+            Ir para configuracao
+          </v-btn>
+        </v-alert>
+
+        <v-select
+          v-model="fichaSelecionadaId"
+          label="Selecione uma Ficha Base"
+          :items="opcoesFichas"
+          item-title="tituloFicha"
+          item-value="codFicha"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+          :disabled="opcoesFichas.length === 0"
+        ></v-select>
+
+        <v-btn
+          color="primary"
+          size="large"
+          block
+          prepend-icon="mdi-swim"
+          :disabled="!fichaSelecionadaId || !tamanhoPiscinaM"
+          :loading="salvando"
+          @click="iniciarTreino"
+        >
+          Iniciar Treino na Piscina
+        </v-btn>
+      </v-card>
+
+      <div v-else-if="treinoAtivo">
+        <v-card color="primary" variant="tonal" class="pa-6 rounded-lg mb-6">
+          <div class="d-flex justify-space-between align-center flex-wrap ga-4">
+            <div>
+              <div class="text-caption text-uppercase font-weight-bold">Treino em Andamento</div>
+              <h2 class="text-h5 font-weight-bold">{{ treinoAtivo.titulo }}</h2>
+              <div class="text-caption mt-1">Piscina {{ treinoAtivo.tamanhoPiscinaM }}m</div>
+            </div>
+
+            <div class="d-flex ga-3">
+              <v-btn color="error" variant="outlined" :loading="salvando" @click="cancelarTreino">
+                Cancelar
+              </v-btn>
+              <v-btn
+                color="success"
+                prepend-icon="mdi-check-circle"
+                :loading="salvando"
+                @click="finalizarTreino"
+              >
+                Finalizar Treino
+              </v-btn>
+            </div>
+          </div>
+        </v-card>
+
+        <v-card
+          v-for="(serie, sIdx) in treinoAtivo.series"
+          :key="serie.codSerieTreino"
+          class="mb-6 pa-4 rounded-lg elevation-2"
+        >
+          <v-card-title class="d-flex justify-space-between align-center">
+            <span class="text-subtitle-1 font-weight-bold text-primary">
+              Serie {{ Number(sIdx) + 1 }}:
+              {{ serie.repeticoes }}x {{ serie.distanciaM }}m - {{ nomeNado(serie.tipoNado) }}
+            </span>
+            <v-chip size="small" color="info">Pausa: {{ serie.pausaSeg }}s</v-chip>
+          </v-card-title>
+
+          <v-card-text>
+            <v-row class="mt-2">
+              <v-col
+                v-for="rIdx in serie.repeticoes"
+                :key="`${serie.codSerieTreino}-${rIdx}`"
+                cols="12"
+                sm="6"
+                md="3"
+              >
+                <v-card variant="outlined" class="pa-3 text-center rounded-lg">
+                  <div class="text-caption text-medium-emphasis mb-1">
+                    Tiro {{ rIdx }} ({{ serie.distanciaM }}m)
+                  </div>
+                  <v-text-field
+                    v-model.number="serie.tiros[rIdx - 1]"
+                    label="Tempo (seg)"
+                    type="number"
+                    variant="filled"
+                    density="compact"
+                    hide-details
+                    suffix="s"
+                    min="0"
+                  ></v-text-field>
+                </v-card>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </div>
+    </template>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import fichaService, { type FichaBaseResponse } from '@/services/fichaService'
+import piscinaService from '@/services/piscinaService'
+import treinoService, { type TreinoResponse } from '@/services/treinoService'
+import { extrairMensagemErro } from '@/services/erros'
+import { nomeNado } from '@/services/formatacao'
 
-const treinoEmAndamento = ref(false)
-const fichaSelecionada = ref<any>(null)
+interface SerieExecucao {
+  codSerieTreino: number
+  codSerieFicha?: number | null
+  ordem: number
+  tipoNado: number
+  repeticoes: number
+  distanciaM: number
+  pausaSeg: number
+  observacoes?: string | null
+  tiros: number[]
+}
 
-const opcoesFichas = ref([
-  {
-    id: 1,
-    titulo: 'Treino A - Resistencia Crawl',
-    series: [
-      { repeticoes: 4, distanciaM: 200, nado: 'Crawl', pausaSeg: 30, tiros: [160, 162, 165, 161] },
-      { repeticoes: 4, distanciaM: 50, nado: 'Crawl', pausaSeg: 15, tiros: [38, 39, 40, 37] }
-    ]
-  }
-])
+interface TreinoExecucao {
+  codTreino: number
+  titulo: string
+  tamanhoPiscinaM: number
+  series: SerieExecucao[]
+}
 
-const treinoAtivo = ref<any>(null)
+const carregando = ref(false)
+const salvando = ref(false)
+const mensagem = ref<{ tipo: 'success' | 'error' | 'warning' | 'info'; texto: string } | null>(null)
 
-const iniciarTreino = () => {
-  if (fichaSelecionada.value) {
-    treinoAtivo.value = JSON.parse(JSON.stringify(fichaSelecionada.value))
-    treinoEmAndamento.value = true
+const opcoesFichas = ref<FichaBaseResponse[]>([])
+const fichaSelecionadaId = ref<number | null>(null)
+const tamanhoPiscinaM = ref<number | null>(null)
+const treinoAtivo = ref<TreinoExecucao | null>(null)
+
+const treinoEmAndamento = computed(() => !!treinoAtivo.value)
+
+const mapearTreino = async (treino: TreinoResponse): Promise<TreinoExecucao> => {
+  const seriesOrdenadas = [...(treino.seriesTreino ?? [])].sort((a, b) => a.ordem - b.ordem)
+
+  const series = await Promise.all(
+    seriesOrdenadas.map(async (serie) => {
+      const tiros = Array.from({ length: serie.quantidadeRepeticoesPlanejada }, () => 0)
+
+      try {
+        const repeticoes = await treinoService.listarRepeticoes(
+          treino.codTreino,
+          serie.codSerieTreino
+        )
+
+        for (const repeticao of repeticoes) {
+          const index = repeticao.numeroRepeticao - 1
+          if (index >= 0 && index < tiros.length) {
+            tiros[index] = Number(repeticao.duracaoSeg)
+          }
+        }
+      } catch {
+        // Se ainda nao houver repeticoes, mantem os campos vazios.
+      }
+
+      return {
+        codSerieTreino: serie.codSerieTreino,
+        codSerieFicha: serie.codSerieFicha,
+        ordem: serie.ordem,
+        tipoNado: serie.tipoNado,
+        repeticoes: serie.quantidadeRepeticoesPlanejada,
+        distanciaM: serie.distanciaPlanejadaM,
+        pausaSeg: Number(serie.tempoPausaSeg),
+        observacoes: serie.observacoes,
+        tiros
+      }
+    })
+  )
+
+  return {
+    codTreino: treino.codTreino,
+    titulo: treino.tituloTreino,
+    tamanhoPiscinaM: treino.tamanhoPiscinaM,
+    series
   }
 }
 
-const finalizarTreino = () => {
-  alert('Treino finalizado com sucesso! Dados e médias consolidados.')
-  treinoEmAndamento.value = false
-  fichaSelecionada.value = null
-}
+const carregarTela = async () => {
+  carregando.value = true
+  mensagem.value = null
 
-const cancelarTreino = () => {
-  if (confirm('Deseja realmente cancelar a execucao do treino?')) {
-    treinoEmAndamento.value = false
-    fichaSelecionada.value = null
+  try {
+    const [fichas, config, emAndamento] = await Promise.all([
+      fichaService.listar(),
+      piscinaService.obterConfiguracao(),
+      treinoService.listar(0)
+    ])
+
+    opcoesFichas.value = fichas
+    tamanhoPiscinaM.value = config?.tamanhoM ?? null
+
+    if (emAndamento.length > 0) {
+      const detalhe = await treinoService.obter(emAndamento[0].codTreino)
+      treinoAtivo.value = await mapearTreino(detalhe)
+      mensagem.value = {
+        tipo: 'info',
+        texto: 'Ha um treino em andamento. Continue de onde parou.'
+      }
+    }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel carregar a tela de treino.')
+    }
+  } finally {
+    carregando.value = false
   }
 }
+
+const iniciarTreino = async () => {
+  if (!fichaSelecionadaId.value || !tamanhoPiscinaM.value) return
+
+  salvando.value = true
+  mensagem.value = null
+
+  try {
+    const treino = await treinoService.iniciar({
+      codFicha: fichaSelecionadaId.value,
+      tamanhoPiscinaM: tamanhoPiscinaM.value
+    })
+    treinoAtivo.value = await mapearTreino(treino)
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel iniciar o treino.')
+    }
+  } finally {
+    salvando.value = false
+  }
+}
+
+const finalizarTreino = async () => {
+  if (!treinoAtivo.value) return
+
+  const temTempo = treinoAtivo.value.series.some((serie) =>
+    serie.tiros.some((tiro) => Number(tiro) > 0)
+  )
+
+  if (!temTempo) {
+    mensagem.value = {
+      tipo: 'warning',
+      texto: 'Informe ao menos um tempo antes de finalizar o treino.'
+    }
+    return
+  }
+
+  salvando.value = true
+  mensagem.value = null
+
+  try {
+    const { codTreino, series } = treinoAtivo.value
+
+    for (const serie of series) {
+      const temposValidos = serie.tiros
+        .map((tiro, index) => ({ numero: index + 1, duracao: Number(tiro) }))
+        .filter((item) => item.duracao > 0)
+
+      const existentes = await treinoService.listarRepeticoes(codTreino, serie.codSerieTreino)
+
+      for (const item of temposValidos) {
+        const payload = {
+          numeroRepeticao: item.numero,
+          distanciaRealM: serie.distanciaM,
+          duracaoSeg: item.duracao
+        }
+
+        const existente = existentes.find((r) => r.numeroRepeticao === item.numero)
+
+        if (existente) {
+          await treinoService.atualizarRepeticao(
+            codTreino,
+            serie.codSerieTreino,
+            existente.codRepeticaoSerieTreino,
+            payload
+          )
+        } else {
+          await treinoService.registrarRepeticao(codTreino, serie.codSerieTreino, payload)
+        }
+      }
+
+      const tempoTotalSeg = temposValidos.reduce((acc, item) => acc + item.duracao, 0)
+      const distanciaTotalM = temposValidos.length * serie.distanciaM
+
+      await treinoService.atualizarSerie(codTreino, serie.codSerieTreino, {
+        codSerieFicha: serie.codSerieFicha,
+        ordem: serie.ordem,
+        tipoNado: serie.tipoNado,
+        quantidadeRepeticoesPlanejada: serie.repeticoes,
+        distanciaPlanejadaM: serie.distanciaM,
+        tempoPausaSeg: serie.pausaSeg,
+        tempoTotalSeg,
+        distanciaTotalM,
+        observacoes: serie.observacoes
+      })
+    }
+
+    await treinoService.finalizar(codTreino)
+
+    treinoAtivo.value = null
+    fichaSelecionadaId.value = null
+    mensagem.value = {
+      tipo: 'success',
+      texto: 'Treino finalizado! Confira o resultado no Historico.'
+    }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel finalizar o treino.')
+    }
+  } finally {
+    salvando.value = false
+  }
+}
+
+const cancelarTreino = async () => {
+  if (!treinoAtivo.value) return
+  if (!confirm('Deseja realmente cancelar a execucao do treino?')) return
+
+  salvando.value = true
+  mensagem.value = null
+
+  try {
+    await treinoService.cancelar(treinoAtivo.value.codTreino)
+    treinoAtivo.value = null
+    fichaSelecionadaId.value = null
+    mensagem.value = { tipo: 'info', texto: 'Treino cancelado.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel cancelar o treino.')
+    }
+  } finally {
+    salvando.value = false
+  }
+}
+
+onMounted(carregarTela)
 </script>

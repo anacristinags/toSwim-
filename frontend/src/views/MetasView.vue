@@ -1,6 +1,5 @@
 ﻿<template>
   <v-container>
-    <!-- Cabeçalho -->
     <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-6 ga-4">
       <div>
         <h1 class="text-h5 font-weight-bold text-primary mb-1">
@@ -15,93 +14,144 @@
         color="primary"
         prepend-icon="mdi-plus"
         size="large"
-        @click="dialogNovaMeta = true"
+        :disabled="opcoesSeries.length === 0"
+        @click="abrirNovaMeta"
       >
         Nova Meta
       </v-btn>
     </div>
 
-    <!-- Filtro de Status -->
+    <v-alert v-if="mensagem" :type="mensagem.tipo" variant="tonal" class="mb-4" density="compact">
+      {{ mensagem.texto }}
+    </v-alert>
+
     <v-tabs v-model="filtroStatus" color="primary" class="mb-6">
       <v-tab :value="null">Todas</v-tab>
       <v-tab :value="0">Ativas</v-tab>
       <v-tab :value="1">Concluidas</v-tab>
     </v-tabs>
 
-    <!-- Cards de Metas -->
-    <v-row>
-      <v-col v-for="meta in metasFiltradas" :key="meta.id" cols="12" md="6">
-        <v-card class="pa-6 rounded-lg elevation-2 border-primary">
+    <div v-if="carregando" class="text-center py-12">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </div>
+
+    <v-alert
+      v-else-if="metasFiltradas.length === 0"
+      type="info"
+      variant="tonal"
+    >
+      Nenhuma meta encontrada para este filtro.
+    </v-alert>
+
+    <v-row v-else>
+      <v-col v-for="meta in metasFiltradas" :key="meta.codMeta" cols="12" md="6">
+        <v-card class="pa-6 rounded-lg elevation-2">
           <div class="d-flex justify-space-between align-start mb-3">
             <div>
               <v-chip
-                :color="meta.status === 1 ? 'success' : 'primary'"
+                :color="meta.status === 1 ? 'success' : meta.status === 2 ? 'error' : 'primary'"
                 size="small"
                 class="mb-2"
               >
-                {{ meta.status === 1 ? 'Concluida' : 'Em Andamento' }}
+                {{ rotuloStatus(meta.status) }}
               </v-chip>
-              <h2 class="text-h6 font-weight-bold">{{ meta.titulo }}</h2>
+              <h2 class="text-h6 font-weight-bold">{{ meta.tituloMeta }}</h2>
             </div>
             <v-chip variant="outlined" color="info">
-              {{ meta.nado }} - {{ meta.distanciaM }}m
+              {{ nomeNado(meta.tipoNado) }} - {{ meta.distanciaAlvoM }}m
             </v-chip>
           </div>
 
           <v-divider class="my-4"></v-divider>
 
-          <!-- Métricas da Meta -->
           <v-row density="compact" class="text-center my-2">
             <v-col cols="4">
               <div class="text-caption text-medium-emphasis">Tempo Alvo</div>
-              <div class="text-subtitle-1 font-weight-bold text-primary">{{ meta.tempoAlvo }}</div>
+              <div class="text-subtitle-1 font-weight-bold text-primary">
+                {{ formatarPace(meta.tempoAlvoSeg) }}
+              </div>
             </v-col>
 
             <v-col cols="4">
               <div class="text-caption text-medium-emphasis">Pace Alvo</div>
-              <div class="text-subtitle-1 font-weight-bold text-info">{{ meta.paceAlvo }} /100m</div>
+              <div class="text-subtitle-1 font-weight-bold text-info">
+                {{ formatarPace(meta.paceAlvoSeg) }} /100m
+              </div>
             </v-col>
 
             <v-col cols="4">
               <div class="text-caption text-medium-emphasis">Melhor Pace</div>
-              <div class="text-subtitle-1 font-weight-bold text-accent">{{ meta.melhorPace || '--' }}</div>
+              <div class="text-subtitle-1 font-weight-bold">
+                {{ formatarPace(meta.melhorPace) }}
+              </div>
             </v-col>
           </v-row>
 
-          <!-- Barra de Progresso Visual -->
           <div class="mt-4">
             <div class="d-flex justify-space-between text-caption mb-1">
               <span>Progresso ate a meta</span>
-              <span class="font-weight-bold text-accent">{{ meta.progresso }}%</span>
+              <span class="font-weight-bold">{{ meta.progresso }}%</span>
             </div>
             <v-progress-linear
               :model-value="meta.progresso"
-              color="accent"
+              color="primary"
               height="8"
               rounded
             ></v-progress-linear>
+          </div>
+
+          <div v-if="meta.status === 0" class="d-flex justify-end ga-2 mt-4">
+            <v-btn
+              size="small"
+              variant="tonal"
+              color="success"
+              @click="marcarConcluida(meta.codMeta)"
+            >
+              Concluir
+            </v-btn>
+            <v-btn
+              size="small"
+              variant="text"
+              color="error"
+              @click="excluirMeta(meta.codMeta)"
+            >
+              Excluir
+            </v-btn>
           </div>
         </v-card>
       </v-col>
     </v-row>
 
-    <!-- Modal Criar Nova Meta -->
-    <v-dialog v-model="dialogNovaMeta" max-width="500">
+    <v-dialog v-model="dialogNovaMeta" max-width="560">
       <v-card class="pa-4 rounded-lg">
         <v-card-title class="font-weight-bold text-primary">Criar Meta de Tempo</v-card-title>
         <v-card-text>
-          <v-text-field
-            v-model="novaMeta.titulo"
-            label="Titulo da Meta (Ex: Baixar de 1m20s nos 100m Crawl)"
+          <v-select
+            v-model="novaMeta.codSerieFicha"
+            label="Serie da Ficha"
+            :items="opcoesSeries"
+            item-title="label"
+            item-value="codSerieFicha"
             variant="outlined"
             density="comfortable"
             class="mb-3 mt-2"
+            @update:model-value="aoSelecionarSerie"
+          ></v-select>
+
+          <v-text-field
+            v-model="novaMeta.tituloMeta"
+            label="Titulo da Meta"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
           ></v-text-field>
 
           <v-select
-            v-model="novaMeta.nado"
+            v-model="novaMeta.tipoNado"
             label="Tipo de Nado"
-            :items="['Crawl', 'Costas', 'Peito', 'Borboleta', 'Medley']"
+            :items="TIPOS_NADO"
+            item-title="title"
+            item-value="value"
             variant="outlined"
             density="comfortable"
             class="mb-3"
@@ -110,7 +160,7 @@
           <v-row>
             <v-col cols="6">
               <v-text-field
-                v-model.number="novaMeta.distanciaM"
+                v-model.number="novaMeta.distanciaAlvoM"
                 label="Distancia (Metros)"
                 type="number"
                 variant="outlined"
@@ -131,7 +181,7 @@
         </v-card-text>
         <v-card-actions class="justify-end">
           <v-btn variant="text" @click="dialogNovaMeta = false">Cancelar</v-btn>
-          <v-btn color="primary" @click="salvarMeta">Criar Meta</v-btn>
+          <v-btn color="primary" :loading="salvando" @click="salvarMeta">Criar Meta</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -139,62 +189,186 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import fichaService from '@/services/fichaService'
+import metaService, { type MetaResponse } from '@/services/metaService'
+import { extrairMensagemErro } from '@/services/erros'
+import { TIPOS_NADO, formatarPace, nomeNado } from '@/services/formatacao'
+
+interface MetaExibicao extends MetaResponse {
+  progresso: number
+  melhorPace?: number | null
+}
+
+interface OpcaoSerie {
+  codSerieFicha: number
+  label: string
+  tipoNado: number
+  distanciaM: number
+  tituloFicha: string
+}
 
 const filtroStatus = ref<number | null>(null)
 const dialogNovaMeta = ref(false)
+const carregando = ref(false)
+const salvando = ref(false)
+const mensagem = ref<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null)
 
-const metas = ref([
-  {
-    id: 1,
-    titulo: 'Baixar de 1m15s nos 100m Crawl',
-    nado: 'Crawl',
-    distanciaM: 100,
-    tempoAlvo: '01:15',
-    paceAlvo: '01:15',
-    melhorPace: '01:18',
-    progresso: 85,
-    status: 0
-  },
-  {
-    id: 2,
-    titulo: 'Meta 400m Livre Sub 6 Minutos',
-    nado: 'Crawl',
-    distanciaM: 400,
-    tempoAlvo: '05:50',
-    paceAlvo: '01:27',
-    melhorPace: '05:48',
-    progresso: 100,
-    status: 1
-  }
-])
+const metas = ref<MetaExibicao[]>([])
+const opcoesSeries = ref<OpcaoSerie[]>([])
 
 const novaMeta = ref({
-  titulo: '',
-  nado: 'Crawl',
-  distanciaM: 100,
+  codSerieFicha: null as number | null,
+  tituloMeta: '',
+  tipoNado: 0,
+  distanciaAlvoM: 100,
   tempoAlvoSeg: 75
 })
 
 const metasFiltradas = computed(() => {
   if (filtroStatus.value === null) return metas.value
-  return metas.value.filter(m => m.status === filtroStatus.value)
+  return metas.value.filter((m) => m.status === filtroStatus.value)
 })
 
-const salvarMeta = () => {
-  if (novaMeta.value.titulo) {
-    metas.value.push({
-      id: Date.now(),
-      titulo: novaMeta.value.titulo,
-      nado: novaMeta.value.nado,
-      distanciaM: novaMeta.value.distanciaM,
-      tempoAlvo: '01:15',
-      paceAlvo: '01:15',
-      melhorPace: '--',
-      progresso: 0,
-      status: 0
-    })
-    dialogNovaMeta.value = false
+const rotuloStatus = (status: number) => {
+  if (status === 1) return 'Concluida'
+  if (status === 2) return 'Cancelada'
+  return 'Em Andamento'
+}
+
+const carregarSeries = async () => {
+  const fichas = await fichaService.listar()
+  opcoesSeries.value = fichas.flatMap((ficha) =>
+    ficha.series.map((serie) => ({
+      codSerieFicha: serie.codSerieFicha,
+      tipoNado: serie.tipoNado,
+      distanciaM: serie.distanciaM,
+      tituloFicha: ficha.tituloFicha,
+      label: `${ficha.tituloFicha} · ${serie.ordem}. ${serie.quantidadeRepeticoes}x${serie.distanciaM}m ${nomeNado(serie.tipoNado)}`
+    }))
+  )
+}
+
+const carregarMetas = async () => {
+  carregando.value = true
+  mensagem.value = null
+
+  try {
+    await carregarSeries()
+    const lista = await metaService.listar()
+
+    const comProgresso = await Promise.all(
+      lista.map(async (meta) => {
+        try {
+          const progresso = await metaService.obterProgresso(meta.codMeta)
+          return {
+            ...meta,
+            progresso: Math.round(progresso.percentualAtingimento ?? 0),
+            melhorPace: progresso.melhorPaceRealizadoSeg
+          }
+        } catch {
+          return {
+            ...meta,
+            progresso: 0,
+            melhorPace: null
+          }
+        }
+      })
+    )
+
+    metas.value = comProgresso
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel carregar as metas.')
+    }
+  } finally {
+    carregando.value = false
   }
 }
+
+const abrirNovaMeta = () => {
+  novaMeta.value = {
+    codSerieFicha: opcoesSeries.value[0]?.codSerieFicha ?? null,
+    tituloMeta: '',
+    tipoNado: opcoesSeries.value[0]?.tipoNado ?? 0,
+    distanciaAlvoM: opcoesSeries.value[0]?.distanciaM ?? 100,
+    tempoAlvoSeg: 75
+  }
+  dialogNovaMeta.value = true
+}
+
+const aoSelecionarSerie = (codSerieFicha: number) => {
+  const serie = opcoesSeries.value.find((s) => s.codSerieFicha === codSerieFicha)
+  if (!serie) return
+
+  novaMeta.value.tipoNado = serie.tipoNado
+  novaMeta.value.distanciaAlvoM = serie.distanciaM
+  if (!novaMeta.value.tituloMeta.trim()) {
+    novaMeta.value.tituloMeta = `Meta ${serie.distanciaM}m ${nomeNado(serie.tipoNado)}`
+  }
+}
+
+const salvarMeta = async () => {
+  if (!novaMeta.value.codSerieFicha || !novaMeta.value.tituloMeta.trim()) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: 'Informe a serie e o titulo da meta.'
+    }
+    return
+  }
+
+  salvando.value = true
+  mensagem.value = null
+
+  try {
+    await metaService.criar({
+      codSerieFicha: novaMeta.value.codSerieFicha,
+      tituloMeta: novaMeta.value.tituloMeta.trim(),
+      tipoNado: novaMeta.value.tipoNado,
+      distanciaAlvoM: novaMeta.value.distanciaAlvoM,
+      tempoAlvoSeg: novaMeta.value.tempoAlvoSeg,
+      modoAvaliacao: 0
+    })
+
+    dialogNovaMeta.value = false
+    await carregarMetas()
+    mensagem.value = { tipo: 'success', texto: 'Meta criada com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel criar a meta.')
+    }
+  } finally {
+    salvando.value = false
+  }
+}
+
+const marcarConcluida = async (id: number) => {
+  try {
+    await metaService.alterarStatus(id, 1)
+    await carregarMetas()
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel concluir a meta.')
+    }
+  }
+}
+
+const excluirMeta = async (id: number) => {
+  if (!confirm('Deseja excluir esta meta?')) return
+
+  try {
+    await metaService.excluir(id)
+    await carregarMetas()
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel excluir a meta.')
+    }
+  }
+}
+
+onMounted(carregarMetas)
 </script>
