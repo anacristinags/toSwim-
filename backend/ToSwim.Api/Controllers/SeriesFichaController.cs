@@ -7,7 +7,7 @@ using ToSwim.Api.Extensions;
 namespace ToSwim.Api.Controllers;
 
 /// <summary>
-/// Controller responsável pela gestão das séries de exercícios vinculadas às Fichas Base.
+/// Controller respons?vel pela gest?o das s?ries de exerc?cios vinculadas ?s Fichas Base.
 /// </summary>
 [ApiController]
 [Route("fichas-base")]
@@ -22,9 +22,9 @@ public class SeriesFichaController : ControllerBase
     }
 
     /// <summary>
-    /// Lista todas as séries de exercícios que compõem uma determinada ficha base.
+    /// Lista todas as s?ries de exerc?cios que comp?em uma determinada ficha base.
     /// </summary>
-    /// <param name="id">Código identificador da Ficha Base.</param>
+    /// <param name="id">C?digo identificador da Ficha Base.</param>
     [HttpGet("{id}/series")]
     [ProducesResponseType(typeof(IEnumerable<SerieFichaResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Listar(int id)
@@ -35,10 +35,10 @@ public class SeriesFichaController : ControllerBase
     }
 
     /// <summary>
-    /// Adiciona uma nova série de exercício física (nado, distância, repetições, pausa) na ficha de natação.
+    /// Adiciona uma nova s?rie de exerc?cio f?sica (nado, dist?ncia, repeti??es, pausa) na ficha de nata??o.
     /// </summary>
-    /// <param name="id">Código identificador da Ficha Base.</param>
-    /// <param name="dto">Informações físicas da série planejada.</param>
+    /// <param name="id">C?digo identificador da Ficha Base.</param>
+    /// <param name="dto">Informa??es f?sicas da s?rie planejada.</param>
     [HttpPost("{id}/series")]
     [ProducesResponseType(typeof(SerieFichaResponseDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -50,10 +50,24 @@ public class SeriesFichaController : ControllerBase
     }
 
     /// <summary>
-    /// Atualiza os parâmetros físicos de uma série de treino específica.
+    /// Duplica uma serie existente, inserindo a copia imediatamente apos a original e reordenando as demais.
     /// </summary>
-    /// <param name="idSerie">Código identificador da série específica.</param>
-    /// <param name="dto">Novas especificações para a série.</param>
+    /// <param name="idSerie">Codigo identificador da serie a duplicar.</param>
+    [HttpPost("series/{idSerie}/duplicar")]
+    [ProducesResponseType(typeof(SerieFichaResponseDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DuplicarSerie(int idSerie)
+    {
+        var codUsuario = User.ObterUsuarioId();
+        var resultado = await _serieService.DuplicarSerieAsync(idSerie, codUsuario);
+        return CreatedAtAction(nameof(Listar), new { id = resultado.CodFicha }, resultado);
+    }
+
+    /// <summary>
+    /// Atualiza os par?metros f?sicos de uma s?rie de treino espec?fica.
+    /// </summary>
+    /// <param name="idSerie">C?digo identificador da s?rie espec?fica.</param>
+    /// <param name="dto">Novas especifica??es para a s?rie.</param>
     [HttpPut("series/{idSerie}")]
     [ProducesResponseType(typeof(SerieFichaResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -65,9 +79,9 @@ public class SeriesFichaController : ControllerBase
     }
 
     /// <summary>
-    /// Remove uma série da Ficha Base e reorganiza automaticamente a ordem de execução das séries restantes.
+    /// Remove uma s?rie da Ficha Base e reorganiza automaticamente a ordem de execu??o das s?ries restantes.
     /// </summary>
-    /// <param name="idSerie">Código identificador da série a ser removida.</param>
+    /// <param name="idSerie">C?digo identificador da s?rie a ser removida.</param>
     [HttpDelete("series/{idSerie}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

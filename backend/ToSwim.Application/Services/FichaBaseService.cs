@@ -31,7 +31,7 @@ public class FichaBaseService : IFichaBaseService
 
     public async Task<FichaBaseResponseDto> CriarAsync(int codUsuario, FichaBaseRequestDto dto)
     {
-        // Regra de Negócio: Limite de 5 Fichas Base Ativas
+        // Regra de Negï¿½cio: Limite de 5 Fichas Base Ativas
         var quantidadeAtivas = await _fichaRepository.ContarFichasAtivasAsync(codUsuario);
         if (quantidadeAtivas >= 5)
         {
@@ -64,7 +64,7 @@ public class FichaBaseService : IFichaBaseService
     public async Task AlterarStatusAsync(int codFicha, int codUsuario, short novoStatus)
     {
         if (novoStatus != 0 && novoStatus != 1)
-            throw new AppException("Status inválido. Use 0 para inativo ou 1 para ativo.", 400);
+            throw new AppException("Status invï¿½lido. Use 0 para inativo ou 1 para ativo.", 400);
 
         var ficha = await ObterFichaEValidarDonoAsync(codFicha, codUsuario);
 
@@ -73,7 +73,7 @@ public class FichaBaseService : IFichaBaseService
             // Valida o limite antes de reativar uma ficha
             var quantidadeAtivas = await _fichaRepository.ContarFichasAtivasAsync(codUsuario);
             if (quantidadeAtivas >= 5)
-                throw new AppException("Não é possível ativar esta ficha. Limite de 5 fichas ativas excedido.", 400);
+                throw new AppException("Nï¿½o ï¿½ possï¿½vel ativar esta ficha. Limite de 5 fichas ativas excedido.", 400);
         }
 
         ficha.Status = novoStatus;
@@ -101,7 +101,7 @@ public class FichaBaseService : IFichaBaseService
         var quantidadeAtivas = await _fichaRepository.ContarFichasAtivasAsync(codUsuario);
         if (quantidadeAtivas >= 5)
         {
-            throw new AppException("Não é possível duplicar. Limite de 5 fichas ativas atingido.", 400);
+            throw new AppException("Nï¿½o ï¿½ possï¿½vel duplicar. Limite de 5 fichas ativas atingido.", 400);
         }
 
         var fichaOriginal = await ObterFichaEValidarDonoAsync(codFicha, codUsuario);
@@ -109,7 +109,7 @@ public class FichaBaseService : IFichaBaseService
         var novaFicha = new FichaBase
         {
             CodUsuario = codUsuario,
-            TituloFicha = $"{fichaOriginal.TituloFicha} (Cópia)",
+            TituloFicha = $"{fichaOriginal.TituloFicha} (Cï¿½pia)",
             TipoFicha = fichaOriginal.TipoFicha,
             Status = 1,
             FichaCopiada = fichaOriginal.CodFicha
@@ -117,7 +117,7 @@ public class FichaBaseService : IFichaBaseService
 
         var criada = await _fichaRepository.CriarAsync(novaFicha);
 
-        // Duplica as séries da ficha
+        // Duplica as sï¿½ries da ficha
         foreach (var serie in fichaOriginal.Series)
         {
             var novaSerie = new SerieFicha
@@ -134,7 +134,7 @@ public class FichaBaseService : IFichaBaseService
             await _serieRepository.CriarAsync(novaSerie);
         }
 
-        // Recarrega a ficha criada com as séries recém-adicionadas
+        // Recarrega a ficha criada com as sï¿½ries recï¿½m-adicionadas
         var fichaCompleta = await _fichaRepository.BuscarPorIdAsync(criada.CodFicha, codUsuario);
         return MapearParaDto(fichaCompleta!);
     }
@@ -143,7 +143,7 @@ public class FichaBaseService : IFichaBaseService
     {
         var ficha = await _fichaRepository.BuscarPorIdAsync(codFicha, codUsuario);
         if (ficha is null)
-            throw new AppException("Ficha de treino não encontrada ou não pertence a você.", 404);
+            throw new AppException("Ficha de treino nï¿½o encontrada ou nï¿½o pertence a vocï¿½.", 404);
 
         return ficha;
     }
@@ -159,7 +159,7 @@ public class FichaBaseService : IFichaBaseService
             FichaCopiada = f.FichaCopiada,
             CreatedAt = f.CreatedAt,
             UpdatedAt = f.UpdatedAt,
-            Series = f.Series.Select(s => new SerieFichaResponseDto
+            Series = f.Series.OrderBy(s => s.Ordem).Select(s => new SerieFichaResponseDto
             {
                 CodSerieFicha = s.CodSerieFicha,
                 CodFicha = s.CodFicha,

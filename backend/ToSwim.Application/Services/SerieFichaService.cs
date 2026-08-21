@@ -22,24 +22,30 @@ public class SerieFichaService : ISerieFichaService
     {
         var ficha = await _fichaRepository.BuscarPorIdAsync(codFicha, codUsuario);
         if (ficha is null)
-            throw new AppException("Ficha não encontrada.", 404);
+            throw new AppException("Ficha nao encontrada.", 404);
 
-        return ficha.Series.Select(s => MapearParaDto(s));
+        return ficha.Series.OrderBy(s => s.Ordem).Select(MapearParaDto);
     }
 
     public async Task<SerieFichaResponseDto> AdicionarSerieAsync(int codFicha, int codUsuario, SerieFichaRequestDto dto)
     {
         var ficha = await _fichaRepository.BuscarPorIdAsync(codFicha, codUsuario);
         if (ficha is null)
-            throw new AppException("Ficha não encontrada ou não pertence a você.", 404);
+            throw new AppException("Ficha nao encontrada ou nao pertence a voce.", 404);
 
-        if (await _serieRepository.ExisteOrdemNaFichaAsync(codFicha, dto.Ordem))
-            throw new AppException($"Já existe uma série na posição {dto.Ordem} nesta ficha.", 400);
+        var proximaOrdem = await _serieRepository.ObterProximaOrdemAsync(codFicha);
+        var ordem = dto.Ordem ?? proximaOrdem;
+
+        if (ordem > proximaOrdem)
+            ordem = proximaOrdem;
+
+        if (ordem < proximaOrdem)
+            await _serieRepository.DeslocarOrdensAPartirAsync(codFicha, ordem);
 
         var serie = new SerieFicha
         {
             CodFicha = codFicha,
-            Ordem = dto.Ordem,
+            Ordem = ordem,
             TipoNado = (TipoNado)dto.TipoNado,
             QuantidadeRepeticoes = dto.QuantidadeRepeticoes,
             DistanciaM = dto.DistanciaM,
@@ -52,17 +58,45 @@ public class SerieFichaService : ISerieFichaService
         return MapearParaDto(criada);
     }
 
+    public async Task<SerieFichaResponseDto> DuplicarSerieAsync(int codSerieFicha, int codUsuario)
+    {
+        var serie = await _serieRepository.BuscarPorIdAsync(codSerieFicha);
+        if (serie is null || serie.Ficha?.CodUsuario != codUsuario)
+            throw new AppException("Serie nao encontrada.", 404);
+
+        var novaOrdem = (short)(serie.Ordem + 1);
+        await _serieRepository.DeslocarOrdensAPartirAsync(serie.CodFicha, novaOrdem);
+
+        var copia = new SerieFicha
+        {
+            CodFicha = serie.CodFicha,
+            Ordem = novaOrdem,
+            TipoNado = serie.TipoNado,
+            QuantidadeRepeticoes = serie.QuantidadeRepeticoes,
+            DistanciaM = serie.DistanciaM,
+            TempoPausaSeg = serie.TempoPausaSeg,
+            IsGoalSeries = serie.IsGoalSeries,
+            Observacoes = serie.Observacoes
+        };
+
+        var criada = await _serieRepository.CriarAsync(copia);
+        return MapearParaDto(criada);
+    }
+
     public async Task<SerieFichaResponseDto> AtualizarSerieAsync(int codSerieFicha, int codUsuario, SerieFichaRequestDto dto)
     {
         var serie = await _serieRepository.BuscarPorIdAsync(codSerieFicha);
         if (serie is null || serie.Ficha?.CodUsuario != codUsuario)
-            throw new AppException("Série não encontrada.", 404);
+            throw new AppException("Serie nao encontrada.", 404);
 
-        // Se mudou de ordem, valida se a nova posição está livre
-        if (serie.Ordem != dto.Ordem && await _serieRepository.ExisteOrdemNaFichaAsync(serie.CodFicha, dto.Ordem))
-            throw new AppException($"Já existe uma série na posição {dto.Ordem} nesta ficha.", 400);
+        if (dto.Ordem is short novaOrdem && serie.Ordem != novaOrdem)
+        {
+            if (await _serieRepository.ExisteOrdemNaFichaAsync(serie.CodFicha, novaOrdem))
+                throw new AppException($"Ja existe uma serie na posicao {novaOrdem} nesta ficha.", 400);
 
-        serie.Ordem = dto.Ordem;
+            serie.Ordem = novaOrdem;
+        }
+
         serie.TipoNado = (TipoNado)dto.TipoNado;
         serie.QuantidadeRepeticoes = dto.QuantidadeRepeticoes;
         serie.DistanciaM = dto.DistanciaM;
@@ -78,12 +112,10 @@ public class SerieFichaService : ISerieFichaService
     {
         var serie = await _serieRepository.BuscarPorIdAsync(codSerieFicha);
         if (serie is null || serie.Ficha?.CodUsuario != codUsuario)
-            throw new AppException("Série não encontrada.", 404);
+            throw new AppException("Serie nao encontrada.", 404);
 
         int codFicha = serie.CodFicha;
         await _serieRepository.ExcluirAsync(serie);
-
-        // Após excluir, reorganiza as ordens restantes para evitar "buracos" (ex: série 1, 3, 4 vira 1, 2, 3)
         await _serieRepository.ReordenarSeriesFichaAsync(codFicha);
     }
 

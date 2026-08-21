@@ -17,15 +17,18 @@ public class TreinoService : ITreinoService
     private readonly ITreinoRepository _treinoRepository;
     private readonly ISerieTreinoRepository _serieTreinoRepository;
     private readonly IFichaBaseRepository _fichaBaseRepository;
+    private readonly IMetricasService _metricasService;
 
     public TreinoService(
         ITreinoRepository treinoRepository,
         ISerieTreinoRepository serieTreinoRepository,
-        IFichaBaseRepository fichaBaseRepository)
+        IFichaBaseRepository fichaBaseRepository,
+        IMetricasService metricasService)
     {
         _treinoRepository = treinoRepository;
         _serieTreinoRepository = serieTreinoRepository;
         _fichaBaseRepository = fichaBaseRepository;
+        _metricasService = metricasService;
     }
 
     public async Task<TreinoResponseDto> IniciarTreinoAsync(int codUsuario, IniciarTreinoRequestDto dto)
@@ -43,8 +46,8 @@ public class TreinoService : ITreinoService
         {
             CodUsuario = codUsuario,
             CodFicha = dto.CodFicha,
-            TituloTreino = string.IsNullOrWhiteSpace(dto.TituloTreino) ? ficha.TituloFicha : dto.TituloTreino,
-            Observacao = dto.Observacao,
+            TituloTreino = string.IsNullOrWhiteSpace(dto.TituloTreino) ? ficha.TituloFicha : dto.TituloTreino.Trim(),
+            Observacao = string.IsNullOrWhiteSpace(dto.Observacao) ? null : dto.Observacao.Trim(),
             TamanhoPiscinaM = dto.TamanhoPiscinaM,
             Status = StatusTreino.Andamento,
             DataTreino = DateTime.UtcNow
@@ -89,7 +92,7 @@ public class TreinoService : ITreinoService
     public async Task<IEnumerable<TreinoResponseDto>> ObterTodosPorUsuarioAsync(int codUsuario, StatusTreino? status, int pagina, int tamanhoPagina)
     {
         if (pagina <= 0) pagina = 1;
-        if (tamanhoPagina <= 0 || tamanhoPagina > 50) tamanhoPagina = 20;
+        if (tamanhoPagina <= 0 || tamanhoPagina > 200) tamanhoPagina = 20;
 
         var treinos = await _treinoRepository.ObterTodosPorUsuarioAsync(codUsuario, status, pagina, tamanhoPagina);
         return treinos.Select(MapearParaDto);
@@ -107,8 +110,8 @@ public class TreinoService : ITreinoService
         if (dto.TamanhoPiscinaM != 25 && dto.TamanhoPiscinaM != 50)
             throw new AppException("O tamanho da piscina deve ser 25 ou 50 metros.", 400);
 
-        treino.TituloTreino = dto.TituloTreino;
-        treino.Observacao = dto.Observacao;
+        treino.TituloTreino = string.IsNullOrWhiteSpace(dto.TituloTreino) ? treino.TituloTreino : dto.TituloTreino.Trim();
+        treino.Observacao = string.IsNullOrWhiteSpace(dto.Observacao) ? null : dto.Observacao.Trim();
         treino.TamanhoPiscinaM = dto.TamanhoPiscinaM;
 
         _treinoRepository.Atualizar(treino);
@@ -147,6 +150,8 @@ public class TreinoService : ITreinoService
 
         _treinoRepository.Atualizar(treino);
         await _treinoRepository.SalvarAlteracoesAsync();
+
+        await _metricasService.AtualizarMetasAtingidasAsync(codUsuario);
 
         return MapearParaDto(treino);
     }

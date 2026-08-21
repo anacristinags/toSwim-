@@ -6,6 +6,8 @@ public interface ISerieFichaRepository
 {
     Task<SerieFicha?> BuscarPorIdAsync(int codSerieFicha);
     Task<bool> ExisteOrdemNaFichaAsync(int codFicha, short ordem);
+    Task<short> ObterProximaOrdemAsync(int codFicha);
+    Task DeslocarOrdensAPartirAsync(int codFicha, short ordemMinima);
     Task<SerieFicha> CriarAsync(SerieFicha serie);
     Task<SerieFicha> AtualizarAsync(SerieFicha serie);
     Task ExcluirAsync(SerieFicha serie);

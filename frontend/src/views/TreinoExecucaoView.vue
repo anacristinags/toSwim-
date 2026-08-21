@@ -36,6 +36,16 @@
           </v-btn>
         </v-alert>
 
+        <v-alert
+          v-else-if="opcoesFichas.length === 0"
+          type="info"
+          variant="tonal"
+          class="mb-4"
+          density="compact"
+        >
+          Nenhuma ficha disponivel. Crie uma ficha base para comecar a treinar.
+        </v-alert>
+
         <v-select
           v-model="fichaSelecionadaId"
           label="Selecione uma Ficha Base"
@@ -46,7 +56,34 @@
           density="comfortable"
           class="mb-4"
           :disabled="opcoesFichas.length === 0"
+          hint="Ate 5 fichas ativas"
+          persistent-hint
+          @update:model-value="aoSelecionarFicha"
         ></v-select>
+
+        <v-text-field
+          v-model="tituloTreino"
+          label="Titulo do treino do dia"
+          placeholder="Ex: Treino regenerativo"
+          variant="outlined"
+          density="comfortable"
+          class="mb-4"
+          hint="Esse nome aparece no historico"
+          persistent-hint
+          :disabled="!fichaSelecionadaId"
+        ></v-text-field>
+
+        <v-textarea
+          v-model="observacaoTreino"
+          label="Comentario (opcional)"
+          placeholder="Ex: piscina cheia, foquei na pernada"
+          variant="outlined"
+          density="comfortable"
+          rows="2"
+          auto-grow
+          class="mb-4"
+          :disabled="!fichaSelecionadaId"
+        ></v-textarea>
 
         <v-btn
           color="primary"
@@ -63,11 +100,30 @@
 
       <div v-else-if="treinoAtivo">
         <v-card color="primary" variant="tonal" class="pa-6 rounded-lg mb-6">
-          <div class="d-flex justify-space-between align-center flex-wrap ga-4">
-            <div>
-              <div class="text-caption text-uppercase font-weight-bold">Treino em Andamento</div>
-              <h2 class="text-h5 font-weight-bold">{{ treinoAtivo.titulo }}</h2>
-              <div class="text-caption mt-1">Piscina {{ treinoAtivo.tamanhoPiscinaM }}m</div>
+          <div class="d-flex justify-space-between align-start flex-wrap ga-4">
+            <div class="flex-grow-1" style="min-width: 260px;">
+              <div class="text-caption text-uppercase font-weight-bold mb-2">Treino em Andamento</div>
+              <v-text-field
+                v-model="treinoAtivo.titulo"
+                label="Titulo do treino do dia"
+                variant="outlined"
+                density="compact"
+                hide-details
+                class="mt-2"
+                bg-color="surface"
+              ></v-text-field>
+              <v-textarea
+                v-model="treinoAtivo.observacao"
+                label="Comentario (opcional)"
+                variant="outlined"
+                density="compact"
+                rows="2"
+                auto-grow
+                hide-details
+                class="mt-3"
+                bg-color="surface"
+              ></v-textarea>
+              <div class="text-caption mt-2">Piscina {{ treinoAtivo.tamanhoPiscinaM }}m</div>
             </div>
 
             <div class="d-flex ga-3">
@@ -155,6 +211,7 @@ interface SerieExecucao {
 interface TreinoExecucao {
   codTreino: number
   titulo: string
+  observacao: string
   tamanhoPiscinaM: number
   series: SerieExecucao[]
 }
@@ -165,6 +222,8 @@ const mensagem = ref<{ tipo: 'success' | 'error' | 'warning' | 'info'; texto: st
 
 const opcoesFichas = ref<FichaBaseResponse[]>([])
 const fichaSelecionadaId = ref<number | null>(null)
+const tituloTreino = ref('')
+const observacaoTreino = ref('')
 const tamanhoPiscinaM = ref<number | null>(null)
 const treinoAtivo = ref<TreinoExecucao | null>(null)
 
@@ -210,6 +269,7 @@ const mapearTreino = async (treino: TreinoResponse): Promise<TreinoExecucao> => 
   return {
     codTreino: treino.codTreino,
     titulo: treino.tituloTreino,
+    observacao: treino.observacao ?? '',
     tamanhoPiscinaM: treino.tamanhoPiscinaM,
     series
   }
@@ -247,6 +307,13 @@ const carregarTela = async () => {
   }
 }
 
+const aoSelecionarFicha = (id: number | null) => {
+  if (id == null) return
+  const ficha = opcoesFichas.value.find((item) => item.codFicha === id)
+  if (!ficha) return
+  tituloTreino.value = ficha.tituloFicha
+}
+
 const iniciarTreino = async () => {
   if (!fichaSelecionadaId.value || !tamanhoPiscinaM.value) return
 
@@ -256,6 +323,8 @@ const iniciarTreino = async () => {
   try {
     const treino = await treinoService.iniciar({
       codFicha: fichaSelecionadaId.value,
+      tituloTreino: tituloTreino.value.trim() || undefined,
+      observacao: observacaoTreino.value.trim() || undefined,
       tamanhoPiscinaM: tamanhoPiscinaM.value
     })
     treinoAtivo.value = await mapearTreino(treino)
@@ -334,10 +403,18 @@ const finalizarTreino = async () => {
       })
     }
 
+    await treinoService.atualizar(codTreino, {
+      tituloTreino: treinoAtivo.value.titulo.trim(),
+      observacao: treinoAtivo.value.observacao.trim() || undefined,
+      tamanhoPiscinaM: treinoAtivo.value.tamanhoPiscinaM
+    })
+
     await treinoService.finalizar(codTreino)
 
     treinoAtivo.value = null
     fichaSelecionadaId.value = null
+    tituloTreino.value = ''
+    observacaoTreino.value = ''
     mensagem.value = {
       tipo: 'success',
       texto: 'Treino finalizado! Confira o resultado no Historico.'
@@ -363,6 +440,8 @@ const cancelarTreino = async () => {
     await treinoService.cancelar(treinoAtivo.value.codTreino)
     treinoAtivo.value = null
     fichaSelecionadaId.value = null
+    tituloTreino.value = ''
+    observacaoTreino.value = ''
     mensagem.value = { tipo: 'info', texto: 'Treino cancelado.' }
   } catch (error) {
     mensagem.value = {

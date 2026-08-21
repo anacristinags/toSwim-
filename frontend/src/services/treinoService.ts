@@ -88,6 +88,14 @@ const obter = async (id: number): Promise<TreinoResponse> => {
   return response.data
 }
 
+const atualizar = async (
+  id: number,
+  dados: { tituloTreino: string; observacao?: string; tamanhoPiscinaM: number }
+): Promise<TreinoResponse> => {
+  const response = await api.put<TreinoResponse>(`/treinos/${id}`, dados)
+  return response.data
+}
+
 const finalizar = async (id: number): Promise<TreinoResponse> => {
   const response = await api.put<TreinoResponse>(`/treinos/${id}/finalizar`)
   return response.data
@@ -149,6 +157,7 @@ export default {
   iniciar,
   listar,
   obter,
+  atualizar,
   finalizar,
   cancelar,
   atualizarSerie,

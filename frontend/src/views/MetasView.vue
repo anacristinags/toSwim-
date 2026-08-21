@@ -98,6 +98,16 @@
               height="8"
               rounded
             ></v-progress-linear>
+            <div class="text-caption text-medium-emphasis mt-2">
+              {{
+                meta.tentativas > 0
+                  ? `${meta.tentativas} tentativa(s) no historico de treinos`
+                  : 'Nenhum treino compativel no historico ainda'
+              }}
+              <span v-if="meta.progresso >= 100 && meta.status === 1">
+                · Meta atingida e concluida automaticamente
+              </span>
+            </div>
           </div>
 
           <div v-if="meta.status === 0" class="d-flex justify-end ga-2 mt-4">
@@ -198,6 +208,7 @@ import { TIPOS_NADO, formatarPace, nomeNado } from '@/services/formatacao'
 interface MetaExibicao extends MetaResponse {
   progresso: number
   melhorPace?: number | null
+  tentativas: number
 }
 
 interface OpcaoSerie {
@@ -264,13 +275,16 @@ const carregarMetas = async () => {
           return {
             ...meta,
             progresso: Math.round(progresso.percentualAtingimento ?? 0),
-            melhorPace: progresso.melhorPaceRealizadoSeg
+            melhorPace: progresso.melhorPaceRealizadoSeg,
+            tentativas: progresso.historicoTentativas?.length ?? 0,
+            status: progresso.status ?? meta.status
           }
         } catch {
           return {
             ...meta,
             progresso: 0,
-            melhorPace: null
+            melhorPace: null,
+            tentativas: 0
           }
         }
       })

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using ToSwim.Application.DTOs.Metricas;
 using ToSwim.Application.Exceptions;
 using ToSwim.Application.Interfaces;
+using ToSwim.Domain.Entities;
 using ToSwim.Domain.Enums;
 using ToSwim.Infrastructure.Data;
 
@@ -95,10 +96,10 @@ public class MetricasService : IMetricasService
 
         var series = await query.ToListAsync();
 
-        // Agrupar por nado e dist˜ncia para extrair os recordes (menor tempo)
         var recordes = series
             .GroupBy(s => new { s.TipoNado, s.DistanciaTotalM })
-            .Select(g => {
+            .Select(g =>
+            {
                 var melhorSerie = g.OrderBy(s => s.TempoTotalSeg).First();
                 return new RecordePessoalDto
                 {
@@ -124,56 +125,68 @@ public class MetricasService : IMetricasService
             .FirstOrDefaultAsync(m => m.CodMeta == codMeta && m.CodUsuario == codUsuario);
 
         if (meta == null)
-            throw new AppException("Meta n˜o encontrada.", 404);
+            throw new AppException("Meta nao encontrada.", 404);
 
-        // Obter todas as tentativas vinculadas a esta meta
-        var vinculos = await _context.TreinosMetas
+        var seriesHistorico = await _context.SeriesTreino
             .AsNoTracking()
-            .Include(tm => tm.Treino)
-            .Include(tm => tm.SerieTreino)
-            .Where(tm => tm.CodMeta == codMeta)
+            .Include(s => s.Treino)
+            .Where(s => s.Treino != null
+                        && s.Treino.CodUsuario == codUsuario
+                        && s.Treino.Status == StatusTreino.Concluido
+                        && s.TipoNado == meta.TipoNado)
             .ToListAsync();
+
+        var idsSeries = seriesHistorico.Select(s => s.CodSerieTreino).ToList();
+        var repeticoes = idsSeries.Count == 0
+            ? new List<RepeticaoSerieTreino>()
+            : await _context.RepeticoesSerieTreino
+                .AsNoTracking()
+                .Where(r => idsSeries.Contains(r.CodSerieTreino) && r.DuracaoSeg > 0)
+                .ToListAsync();
+
+        var repsPorSerie = repeticoes
+            .GroupBy(r => r.CodSerieTreino)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         var historico = new List<EvolucaoPaceDto>();
         decimal? melhorTempo = null;
         decimal? melhorPace = null;
 
-        foreach (var v in vinculos)
+        foreach (var serie in seriesHistorico)
         {
-            if (v.SerieTreino != null && v.SerieTreino.TempoTotalSeg.HasValue && v.SerieTreino.DistanciaTotalM > 0)
-            {
-                decimal pace = v.SerieTreino.PaceMedioSeg ?? CalcularPace(v.SerieTreino.DistanciaTotalM.Value, v.SerieTreino.TempoTotalSeg.Value);
+            repsPorSerie.TryGetValue(serie.CodSerieTreino, out var repsDaSerie);
+            repsDaSerie ??= new List<RepeticaoSerieTreino>();
 
+            foreach (var tentativa in ExtrairTentativas(meta, serie, repsDaSerie))
+            {
                 historico.Add(new EvolucaoPaceDto
                 {
-                    Data = v.Treino!.DataTreino,
-                    TituloTreino = v.Treino.TituloTreino,
-                    TipoNado = v.SerieTreino.TipoNado,
-                    DistanciaM = v.SerieTreino.DistanciaTotalM.Value,
-                    PaceSeg = pace
+                    Data = tentativa.Data,
+                    TituloTreino = tentativa.TituloTreino,
+                    TipoNado = tentativa.TipoNado,
+                    DistanciaM = tentativa.DistanciaM,
+                    PaceSeg = tentativa.PaceSeg
                 });
 
-                if (v.SerieTreino.DistanciaTotalM.Value == meta.DistanciaAlvoM)
+                if (melhorTempo == null || tentativa.TempoSeg < melhorTempo.Value)
                 {
-                    if (melhorTempo == null || v.SerieTreino.TempoTotalSeg.Value < melhorTempo.Value)
-                    {
-                        melhorTempo = v.SerieTreino.TempoTotalSeg.Value;
-                        melhorPace = pace;
-                    }
+                    melhorTempo = tentativa.TempoSeg;
+                    melhorPace = tentativa.PaceSeg;
                 }
             }
         }
 
-        // Calcular percentual de aproxima˜˜o do pace
         double percentual = 0.0;
-        if (melhorPace.HasValue)
+        if (melhorTempo.HasValue && melhorTempo.Value > 0 && meta.TempoAlvoSeg > 0)
         {
-            // Ex: Se o pace alvo ˜ 90s (1min30s) e meu melhor ˜ 100s:
-            // Formula: (PaceAlvo / MelhorPace) * 100. Se bateu a meta, fica >= 100%
-            percentual = (double)meta.PaceAlvoSeg / (double)melhorPace.Value * 100;
+            percentual = (double)(meta.TempoAlvoSeg / melhorTempo.Value) * 100;
             if (percentual > 100.0) percentual = 100.0;
             percentual = Math.Round(percentual, 2);
         }
+
+        var statusAtual = meta.Status;
+        if (percentual >= 100.0 && statusAtual == StatusMeta.Ativa)
+            statusAtual = await ConcluirMetaSeAtivaAsync(meta.CodMeta);
 
         return new ProgressoMetaDto
         {
@@ -185,8 +198,160 @@ public class MetricasService : IMetricasService
             MelhorTempoRealizadoSeg = melhorTempo,
             MelhorPaceRealizadoSeg = melhorPace,
             PercentualAtingimento = percentual,
+            Status = statusAtual,
             HistoricoTentativas = historico.OrderBy(h => h.Data).ToList()
         };
+    }
+
+    public async Task AtualizarMetasAtingidasAsync(int codUsuario)
+    {
+        var metasAtivas = await _context.Metas
+            .AsNoTracking()
+            .Where(m => m.CodUsuario == codUsuario && m.Status == StatusMeta.Ativa)
+            .Select(m => m.CodMeta)
+            .ToListAsync();
+
+        foreach (var codMeta in metasAtivas)
+            await ObterProgressoMetaAsync(codMeta, codUsuario);
+    }
+
+    private async Task<StatusMeta> ConcluirMetaSeAtivaAsync(int codMeta)
+    {
+        var meta = await _context.Metas.FirstOrDefaultAsync(m => m.CodMeta == codMeta && m.Status == StatusMeta.Ativa);
+        if (meta == null)
+            return StatusMeta.Concluida;
+
+        meta.Status = StatusMeta.Concluida;
+        await _context.SaveChangesAsync();
+        return StatusMeta.Concluida;
+    }
+
+    private static IEnumerable<TentativaMeta> ExtrairTentativas(
+        Meta meta,
+        SerieTreino serie,
+        List<RepeticaoSerieTreino> repeticoes)
+    {
+        return meta.ModoAvaliacao switch
+        {
+            ModoAvaliacaoMeta.Media => ExtrairTentativasMedia(meta, serie, repeticoes),
+            ModoAvaliacaoMeta.Total => ExtrairTentativasTotal(meta, serie, repeticoes),
+            _ => ExtrairTentativasRepeticao(meta, serie, repeticoes)
+        };
+    }
+
+    private static IEnumerable<TentativaMeta> ExtrairTentativasRepeticao(
+        Meta meta,
+        SerieTreino serie,
+        List<RepeticaoSerieTreino> repeticoes)
+    {
+        var tirosAlvo = repeticoes.Where(r => r.DistanciaRealM == meta.DistanciaAlvoM).ToList();
+        if (tirosAlvo.Count > 0)
+        {
+            foreach (var tiro in tirosAlvo)
+            {
+                var tentativa = CriarTentativa(
+                    serie,
+                    tiro.DistanciaRealM,
+                    tiro.DuracaoSeg,
+                    tiro.PaceSeg);
+                if (tentativa != null)
+                    yield return tentativa;
+            }
+
+            yield break;
+        }
+
+        var fallback = TentarSerieComoUnicaProva(meta, serie);
+        if (fallback != null)
+            yield return fallback;
+    }
+
+    private static IEnumerable<TentativaMeta> ExtrairTentativasMedia(
+        Meta meta,
+        SerieTreino serie,
+        List<RepeticaoSerieTreino> repeticoes)
+    {
+        var tirosAlvo = repeticoes.Where(r => r.DistanciaRealM == meta.DistanciaAlvoM).ToList();
+        if (tirosAlvo.Count > 0)
+        {
+            var tempoMedio = tirosAlvo.Average(r => r.DuracaoSeg);
+            var tentativa = CriarTentativa(serie, meta.DistanciaAlvoM, tempoMedio, null);
+            if (tentativa != null)
+                yield return tentativa;
+
+            yield break;
+        }
+
+        var fallback = TentarSerieComoUnicaProva(meta, serie);
+        if (fallback != null)
+            yield return fallback;
+    }
+
+    private static IEnumerable<TentativaMeta> ExtrairTentativasTotal(
+        Meta meta,
+        SerieTreino serie,
+        List<RepeticaoSerieTreino> repeticoes)
+    {
+        if (serie.DistanciaTotalM == meta.DistanciaAlvoM && serie.TempoTotalSeg.GetValueOrDefault() > 0)
+        {
+            var tentativa = CriarTentativa(
+                serie,
+                serie.DistanciaTotalM.Value,
+                serie.TempoTotalSeg!.Value,
+                serie.PaceMedioSeg);
+            if (tentativa != null)
+                yield return tentativa;
+
+            yield break;
+        }
+
+        if (repeticoes.Count == 0)
+            yield break;
+
+        var distancia = repeticoes.Sum(r => r.DistanciaRealM);
+        var tempo = repeticoes.Sum(r => r.DuracaoSeg);
+        if (distancia != meta.DistanciaAlvoM || tempo <= 0)
+            yield break;
+
+        var tentativaReps = CriarTentativa(serie, distancia, tempo, null);
+        if (tentativaReps != null)
+            yield return tentativaReps;
+    }
+
+    private static TentativaMeta? TentarSerieComoUnicaProva(Meta meta, SerieTreino serie)
+    {
+        if (serie.TempoTotalSeg.GetValueOrDefault() <= 0)
+            return null;
+
+        var distanciaUnica = serie.DistanciaTotalM == meta.DistanciaAlvoM
+            || (serie.DistanciaPlanejadaM == meta.DistanciaAlvoM && serie.QuantidadeRepeticoesPlanejada == 1);
+
+        if (!distanciaUnica)
+            return null;
+
+        return CriarTentativa(
+            serie,
+            meta.DistanciaAlvoM,
+            serie.TempoTotalSeg!.Value,
+            serie.PaceMedioSeg);
+    }
+
+    private static TentativaMeta? CriarTentativa(
+        SerieTreino serie,
+        int distanciaM,
+        decimal tempoSeg,
+        decimal? paceSeg)
+    {
+        if (serie.Treino == null || distanciaM <= 0 || tempoSeg <= 0)
+            return null;
+
+        return new TentativaMeta(
+            serie.Treino.DataTreino,
+            serie.Treino.TituloTreino,
+            serie.TipoNado,
+            distanciaM,
+            tempoSeg,
+            paceSeg ?? CalcularPace(distanciaM, tempoSeg));
     }
 
     private static decimal CalcularPace(int distanciaMetros, decimal tempoSegundos)
@@ -194,4 +359,12 @@ public class MetricasService : IMetricasService
         if (distanciaMetros == 0) return 0m;
         return Math.Round(tempoSegundos * 100m / distanciaMetros, 2);
     }
+
+    private sealed record TentativaMeta(
+        DateTime Data,
+        string TituloTreino,
+        TipoNado TipoNado,
+        int DistanciaM,
+        decimal TempoSeg,
+        decimal PaceSeg);
 }

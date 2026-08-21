@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using ToSwim.Domain.Enums;
+
 namespace ToSwim.Application.DTOs.Metricas;
 
 public class ProgressoMetaDto
@@ -12,5 +14,6 @@ public class ProgressoMetaDto
     public decimal? MelhorTempoRealizadoSeg { get; set; }
     public decimal? MelhorPaceRealizadoSeg { get; set; }
     public double PercentualAtingimento { get; set; } // De 0.0 a 100.0
+    public StatusMeta Status { get; set; }
     public List<EvolucaoPaceDto> HistoricoTentativas { get; set; } = new();
 }

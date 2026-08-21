@@ -32,7 +32,7 @@ export interface FichaBasePayload {
 }
 
 export interface SerieFichaPayload {
-  ordem: number
+  ordem?: number
   tipoNado: number
   quantidadeRepeticoes: number
   distanciaM: number
@@ -76,6 +76,13 @@ const adicionarSerie = async (
   return response.data
 }
 
+const duplicarSerie = async (idSerie: number): Promise<SerieFichaResponse> => {
+  const response = await api.post<SerieFichaResponse>(
+    `/fichas-base/series/${idSerie}/duplicar`
+  )
+  return response.data
+}
+
 const excluirSerie = async (idSerie: number): Promise<void> => {
   await api.delete(`/fichas-base/series/${idSerie}`)
 }
@@ -87,5 +94,6 @@ export default {
   duplicar,
   excluir,
   adicionarSerie,
+  duplicarSerie,
   excluirSerie
 }

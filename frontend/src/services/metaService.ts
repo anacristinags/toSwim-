@@ -39,6 +39,14 @@ export interface ProgressoMetaResponse {
   melhorTempoRealizadoSeg?: number | null
   melhorPaceRealizadoSeg?: number | null
   percentualAtingimento: number
+  status?: number
+  historicoTentativas?: Array<{
+    data: string
+    tituloTreino: string
+    tipoNado: number
+    distanciaM: number
+    paceSeg: number
+  }>
 }
 
 const listar = async (status?: number | null): Promise<MetaResponse[]> => {

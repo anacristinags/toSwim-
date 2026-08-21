@@ -53,7 +53,7 @@
               <v-icon icon="mdi-swim" color="primary" class="mr-2"></v-icon>
             </template>
             <v-card-title class="font-weight-bold">{{ ficha.tituloFicha }}</v-card-title>
-            <v-card-subtitle>{{ ficha.series.length }} series cadastradas</v-card-subtitle>
+            <v-card-subtitle>{{ seriesDaFicha(ficha).length }} series cadastradas</v-card-subtitle>
 
             <template v-slot:append>
               <v-btn
@@ -81,7 +81,7 @@
           <v-card-text class="flex-grow-1">
             <v-list density="compact" class="bg-transparent">
               <v-list-item
-                v-for="serie in ficha.series"
+                v-for="serie in seriesDaFicha(ficha)"
                 :key="serie.codSerieFicha"
                 class="px-0"
               >
@@ -99,6 +99,14 @@
                 </v-list-item-subtitle>
 
                 <template v-slot:append>
+                  <v-btn
+                    icon="mdi-content-copy"
+                    variant="text"
+                    density="compact"
+                    color="info"
+                    title="Duplicar serie"
+                    @click="duplicarSerie(serie.codSerieFicha)"
+                  ></v-btn>
                   <v-btn
                     icon="mdi-delete-outline"
                     variant="text"
@@ -236,9 +244,14 @@ const novaSerie = ref({
   observacoes: ''
 })
 
-const carregarFichas = async () => {
-  carregando.value = true
-  mensagem.value = null
+const seriesDaFicha = (ficha: FichaBaseResponse) =>
+  [...(ficha.series ?? [])].sort((a, b) => a.ordem - b.ordem)
+
+const carregarFichas = async (silencioso = false) => {
+  if (!silencioso) {
+    carregando.value = true
+    mensagem.value = null
+  }
 
   try {
     fichas.value = await fichaService.listar()
@@ -248,7 +261,7 @@ const carregarFichas = async () => {
       texto: extrairMensagemErro(error, 'Nao foi possivel carregar as fichas.')
     }
   } finally {
-    carregando.value = false
+    if (!silencioso) carregando.value = false
   }
 }
 
@@ -328,11 +341,7 @@ const abrirAdicionarSerie = (ficha: FichaBaseResponse) => {
 const salvarNovaSerie = async () => {
   if (fichaSelecionadaId.value == null) return
 
-  const ficha = fichas.value.find((f) => f.codFicha === fichaSelecionadaId.value)
-  const proximaOrdem = (ficha?.series.length ?? 0) + 1
-
   const payload: SerieFichaPayload = {
-    ordem: proximaOrdem,
     tipoNado: novaSerie.value.tipoNado,
     quantidadeRepeticoes: novaSerie.value.quantidadeRepeticoes,
     distanciaM: novaSerie.value.distanciaM,
@@ -347,7 +356,7 @@ const salvarNovaSerie = async () => {
   try {
     await fichaService.adicionarSerie(fichaSelecionadaId.value, payload)
     dialogNovaSerie.value = false
-    await carregarFichas()
+    await carregarFichas(true)
     mensagem.value = { tipo: 'success', texto: 'Serie adicionada com sucesso.' }
   } catch (error) {
     mensagem.value = {
@@ -359,6 +368,21 @@ const salvarNovaSerie = async () => {
   }
 }
 
+const duplicarSerie = async (idSerie: number) => {
+  mensagem.value = null
+
+  try {
+    await fichaService.duplicarSerie(idSerie)
+    await carregarFichas(true)
+    mensagem.value = { tipo: 'success', texto: 'Serie duplicada com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel duplicar a serie.')
+    }
+  }
+}
+
 const excluirSerie = async (idSerie: number) => {
   if (!confirm('Deseja remover esta serie?')) return
 
@@ -366,7 +390,8 @@ const excluirSerie = async (idSerie: number) => {
 
   try {
     await fichaService.excluirSerie(idSerie)
-    await carregarFichas()
+    await carregarFichas(true)
+    mensagem.value = { tipo: 'success', texto: 'Serie removida com sucesso.' }
   } catch (error) {
     mensagem.value = {
       tipo: 'error',

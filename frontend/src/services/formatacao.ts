@@ -44,3 +44,13 @@ export const formatarData = (iso: string | Date): string => {
 
   return data.toLocaleDateString('pt-BR')
 }
+
+export const dataLocalISO = (iso: string | Date): string => {
+  const data = typeof iso === 'string' ? new Date(iso) : iso
+  if (Number.isNaN(data.getTime())) return ''
+
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}

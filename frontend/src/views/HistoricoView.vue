@@ -25,49 +25,91 @@
       Nenhum treino concluido ainda. Finalize um treino na tela de Execucao.
     </v-alert>
 
-    <v-card v-else class="rounded-lg elevation-2">
-      <v-table hover>
-        <thead>
-          <tr>
-            <th class="text-left font-weight-bold">Data</th>
-            <th class="text-left font-weight-bold">Treino</th>
-            <th class="text-center font-weight-bold">Distancia Total</th>
-            <th class="text-center font-weight-bold">Tempo Total</th>
-            <th class="text-center font-weight-bold">Pace Medio</th>
-            <th class="text-right font-weight-bold">Acoes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in historicoTreinos" :key="item.codTreino">
-            <td class="text-body-2 font-weight-medium">{{ formatarData(item.dataTreino) }}</td>
-            <td class="font-weight-bold text-primary">{{ item.tituloTreino }}</td>
-            <td class="text-center">
-              <v-chip size="small" color="info" variant="tonal">
-                {{ item.distanciaTotalM }}m
-              </v-chip>
-            </td>
-            <td class="text-center font-weight-medium">
-              {{ formatarDuracao(item.duracaoTotalSeg) }}
-            </td>
-            <td class="text-center">
-              <v-chip size="small" color="primary" variant="tonal">
-                {{ formatarPace(item.paceMedioSeg) }} /100m
-              </v-chip>
-            </td>
-            <td class="text-right">
-              <v-btn
-                icon="mdi-eye-outline"
-                variant="text"
-                color="primary"
-                density="comfortable"
-                :loading="carregandoDetalhe === item.codTreino"
-                @click="abrirDetalhes(item.codTreino)"
-              ></v-btn>
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
-    </v-card>
+    <template v-else>
+      <v-row class="mb-4">
+        <v-col cols="12" md="6">
+          <v-text-field
+            v-model="filtroTitulo"
+            label="Filtrar por titulo"
+            placeholder="Ex: regenerativo"
+            prepend-inner-icon="mdi-magnify"
+            variant="outlined"
+            density="comfortable"
+            clearable
+            hide-details
+          ></v-text-field>
+        </v-col>
+        <v-col cols="12" md="6">
+          <v-text-field
+            v-model="filtroData"
+            label="Filtrar por data"
+            type="date"
+            prepend-inner-icon="mdi-calendar"
+            variant="outlined"
+            density="comfortable"
+            clearable
+            hide-details
+          ></v-text-field>
+        </v-col>
+      </v-row>
+
+      <v-alert
+        v-if="historicoFiltrado.length === 0"
+        type="info"
+        variant="tonal"
+      >
+        Nenhum treino encontrado para esses filtros.
+      </v-alert>
+
+      <v-card v-else class="rounded-lg elevation-2">
+        <v-table hover>
+          <thead>
+            <tr>
+              <th class="text-left font-weight-bold">Data</th>
+              <th class="text-left font-weight-bold">Treino</th>
+              <th class="text-center font-weight-bold">Distancia Total</th>
+              <th class="text-center font-weight-bold">Tempo Total</th>
+              <th class="text-center font-weight-bold">Pace Medio</th>
+              <th class="text-right font-weight-bold">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in historicoFiltrado" :key="item.codTreino">
+              <td class="text-body-2 font-weight-medium">{{ formatarData(item.dataTreino) }}</td>
+              <td>
+                <div class="font-weight-bold text-primary">{{ item.tituloTreino }}</div>
+                <div v-if="item.observacao" class="text-caption text-medium-emphasis">
+                  {{ item.observacao }}
+                </div>
+              </td>
+              <td class="text-center">
+                <v-chip size="small" color="info" variant="tonal">
+                  {{ item.distanciaTotalM }}m
+                </v-chip>
+              </td>
+              <td class="text-center font-weight-medium">
+                {{ formatarDuracao(item.duracaoTotalSeg) }}
+              </td>
+              <td class="text-center">
+                <v-chip size="small" color="primary" variant="tonal">
+                  {{ formatarPace(item.paceMedioSeg) }} /100m
+                </v-chip>
+              </td>
+              <td class="text-right">
+                <v-btn
+                  icon="mdi-eye-outline"
+                  variant="text"
+                  color="primary"
+                  density="comfortable"
+                  :loading="carregandoDetalhe === item.codTreino"
+                  @click="abrirDetalhes(item.codTreino)"
+                ></v-btn>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-card>
+    </template>
 
     <v-dialog v-model="dialogDetalhes" max-width="600">
       <v-card v-if="treinoSelecionado" class="pa-6 rounded-lg">
@@ -77,6 +119,16 @@
         <v-card-subtitle class="px-0 mb-4">
           Realizado em {{ formatarData(treinoSelecionado.dataTreino) }}
         </v-card-subtitle>
+
+        <v-alert
+          v-if="treinoSelecionado.observacao"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ treinoSelecionado.observacao }}
+        </v-alert>
 
         <v-divider class="mb-4"></v-divider>
 
@@ -114,18 +166,31 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import historicoService from '@/services/historicoService'
 import type { TreinoResponse } from '@/services/treinoService'
 import { extrairMensagemErro } from '@/services/erros'
-import { formatarData, formatarDuracao, formatarPace, nomeNado } from '@/services/formatacao'
+import { dataLocalISO, formatarData, formatarDuracao, formatarPace, nomeNado } from '@/services/formatacao'
 
 const dialogDetalhes = ref(false)
 const treinoSelecionado = ref<TreinoResponse | null>(null)
 const historicoTreinos = ref<TreinoResponse[]>([])
+const filtroTitulo = ref('')
+const filtroData = ref('')
 const carregando = ref(false)
 const carregandoDetalhe = ref<number | null>(null)
 const mensagem = ref<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null)
+
+const historicoFiltrado = computed(() => {
+  const titulo = filtroTitulo.value.trim().toLowerCase()
+  const data = filtroData.value
+
+  return historicoTreinos.value.filter((item) => {
+    const bateTitulo = !titulo || item.tituloTreino.toLowerCase().includes(titulo)
+    const bateData = !data || dataLocalISO(item.dataTreino) === data
+    return bateTitulo && bateData
+  })
+})
 
 const carregarHistorico = async () => {
   carregando.value = true

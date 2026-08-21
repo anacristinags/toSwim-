@@ -3,7 +3,7 @@ import type { TreinoResponse } from './treinoService'
 
 const listar = async (): Promise<TreinoResponse[]> => {
   const response = await api.get<TreinoResponse[]>('/historico/treinos', {
-    params: { pagina: 1, tamanhoPagina: 50 }
+    params: { pagina: 1, tamanhoPagina: 200 }
   })
   return response.data
 }

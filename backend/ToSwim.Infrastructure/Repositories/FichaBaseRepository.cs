@@ -18,6 +18,7 @@ public class FichaBaseRepository : IFichaBaseRepository
     {
         return await _context.FichasBase
             .AsNoTracking()
+            .Include(f => f.Series.OrderBy(s => s.Ordem))
             .Where(f => f.CodUsuario == codUsuario && f.Status == 1)
             .OrderByDescending(f => f.CreatedAt)
             .ToListAsync();

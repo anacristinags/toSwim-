@@ -11,4 +11,5 @@ public interface IMetricasService
     Task<IEnumerable<EvolucaoPaceDto>> ObterEvolucaoPaceAsync(int codUsuario, TipoNado? nado);
     Task<IEnumerable<RecordePessoalDto>> ObterMelhoresTemposAsync(int codUsuario, TipoNado? nado, int? distancia);
     Task<ProgressoMetaDto> ObterProgressoMetaAsync(int codMeta, int codUsuario);
+    Task AtualizarMetasAtingidasAsync(int codUsuario);
 }
