@@ -110,8 +110,9 @@
             </div>
           </div>
 
-          <div v-if="meta.status === 0" class="d-flex justify-end ga-2 mt-4">
+          <div class="d-flex justify-end ga-2 mt-4">
             <v-btn
+              v-if="meta.status === 0"
               size="small"
               variant="tonal"
               color="success"

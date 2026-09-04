@@ -17,6 +17,7 @@ public class SerieTreino : IAuditable
     public decimal? TempoTotalSeg { get; set; } // int? -> decimal?
     public int? DistanciaTotalM { get; set; }
     public decimal? PaceMedioSeg { get; set; }  // int? -> decimal?
+    public bool IgnorarNoPace { get; set; }
     public string? Observacoes { get; set; }
 
     public DateTime CreatedAt { get; set; }

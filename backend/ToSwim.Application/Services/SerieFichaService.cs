@@ -51,6 +51,7 @@ public class SerieFichaService : ISerieFichaService
             DistanciaM = dto.DistanciaM,
             TempoPausaSeg = dto.TempoPausaSeg,
             IsGoalSeries = dto.IsGoalSeries,
+            IgnorarNoPace = dto.IgnorarNoPace,
             Observacoes = dto.Observacoes
         };
 
@@ -76,6 +77,7 @@ public class SerieFichaService : ISerieFichaService
             DistanciaM = serie.DistanciaM,
             TempoPausaSeg = serie.TempoPausaSeg,
             IsGoalSeries = serie.IsGoalSeries,
+            IgnorarNoPace = serie.IgnorarNoPace,
             Observacoes = serie.Observacoes
         };
 
@@ -102,6 +104,7 @@ public class SerieFichaService : ISerieFichaService
         serie.DistanciaM = dto.DistanciaM;
         serie.TempoPausaSeg = dto.TempoPausaSeg;
         serie.IsGoalSeries = dto.IsGoalSeries;
+        serie.IgnorarNoPace = dto.IgnorarNoPace;
         serie.Observacoes = dto.Observacoes;
 
         var atualizada = await _serieRepository.AtualizarAsync(serie);
@@ -130,6 +133,7 @@ public class SerieFichaService : ISerieFichaService
             DistanciaM = s.DistanciaM,
             TempoPausaSeg = s.TempoPausaSeg,
             IsGoalSeries = s.IsGoalSeries,
+            IgnorarNoPace = s.IgnorarNoPace,
             Observacoes = s.Observacoes,
             CreatedAt = s.CreatedAt,
             UpdatedAt = s.UpdatedAt

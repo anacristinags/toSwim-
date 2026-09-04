@@ -19,6 +19,7 @@ public class SerieFichaConfiguration : IEntityTypeConfiguration<SerieFicha>
         builder.Property(s => s.DistanciaM).HasColumnName("distancia_m").IsRequired();
         builder.Property(s => s.TempoPausaSeg).HasColumnName("tempo_pausa_seg").HasColumnType("numeric(10,2)").IsRequired();
         builder.Property(s => s.IsGoalSeries).HasColumnName("is_goal_series").IsRequired();
+        builder.Property(s => s.IgnorarNoPace).HasColumnName("ignorar_no_pace").HasDefaultValue(false).IsRequired();
         builder.Property(s => s.Observacoes).HasColumnName("observacoes");
         builder.Property(s => s.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(s => s.UpdatedAt).HasColumnName("updated_at").IsRequired();

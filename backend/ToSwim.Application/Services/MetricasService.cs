@@ -31,7 +31,20 @@ public class MetricasService : IMetricasService
         int totalTreinos = treinosConcluidos.Count;
         int totalMetros = treinosConcluidos.Sum(t => t.DistanciaTotalM);
         decimal totalTempo = treinosConcluidos.Sum(t => t.DuracaoTotalSeg);
-        decimal? paceGeral = (totalMetros > 0) ? Math.Round(totalTempo * 100m / totalMetros, 2) : null;
+
+        // O pace geral exclui series marcadas para nao participar do calculo do pace medio
+        var seriesParaPace = await _context.SeriesTreino
+            .AsNoTracking()
+            .Where(s => s.Treino!.CodUsuario == codUsuario
+                        && s.Treino.Status == StatusTreino.Concluido
+                        && !s.IgnorarNoPace
+                        && s.DistanciaTotalM.HasValue
+                        && s.TempoTotalSeg.HasValue)
+            .ToListAsync();
+
+        int metrosParaPace = seriesParaPace.Sum(s => s.DistanciaTotalM ?? 0);
+        decimal tempoParaPace = seriesParaPace.Sum(s => s.TempoTotalSeg ?? 0m);
+        decimal? paceGeral = (metrosParaPace > 0) ? Math.Round(tempoParaPace * 100m / metrosParaPace, 2) : null;
 
         int metasAtivas = await _context.Metas.CountAsync(m => m.CodUsuario == codUsuario && m.Status == StatusMeta.Ativa);
         int metasConcluidas = await _context.Metas.CountAsync(m => m.CodUsuario == codUsuario && m.Status == StatusMeta.Concluida);
@@ -54,6 +67,7 @@ public class MetricasService : IMetricasService
             .Include(s => s.Treino)
             .Where(s => s.Treino!.CodUsuario == codUsuario
                         && s.Treino.Status == StatusTreino.Concluido
+                        && !s.IgnorarNoPace
                         && s.DistanciaTotalM.HasValue
                         && s.TempoTotalSeg.HasValue
                         && s.DistanciaTotalM > 0);

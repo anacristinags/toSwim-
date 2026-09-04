@@ -67,7 +67,8 @@ public class TreinoService : ITreinoService
                 TipoNado = serieFicha.TipoNado,
                 QuantidadeRepeticoesPlanejada = serieFicha.QuantidadeRepeticoes,
                 DistanciaPlanejadaM = serieFicha.DistanciaM,
-                TempoPausaSeg = serieFicha.TempoPausaSeg
+                TempoPausaSeg = serieFicha.TempoPausaSeg,
+                IgnorarNoPace = serieFicha.IgnorarNoPace
             };
 
             await _serieTreinoRepository.AdicionarAsync(novaSerieTreino);
@@ -133,20 +134,29 @@ public class TreinoService : ITreinoService
         int distanciaAcumulada = 0;
         decimal duracaoAcumulada = 0m;
 
+        // Base do pace m?dio exclui s?ries marcadas para n?o participar do c?lculo
+        int distanciaParaPace = 0;
+        decimal duracaoParaPace = 0m;
+
         foreach (var serie in treino.SeriesTreino)
         {
             distanciaAcumulada += serie.DistanciaTotalM ?? 0;
             duracaoAcumulada += serie.TempoTotalSeg ?? 0m;
+
+            if (!serie.IgnorarNoPace)
+            {
+                distanciaParaPace += serie.DistanciaTotalM ?? 0;
+                duracaoParaPace += serie.TempoTotalSeg ?? 0m;
+            }
         }
 
         treino.DistanciaTotalM = distanciaAcumulada;
         treino.DuracaoTotalSeg = duracaoAcumulada;
         treino.Status = StatusTreino.Concluido;
 
-        if (distanciaAcumulada > 0 && duracaoAcumulada > 0)
-        {
-            treino.PaceMedioSeg = CalcularPace(distanciaAcumulada, duracaoAcumulada);
-        }
+        treino.PaceMedioSeg = (distanciaParaPace > 0 && duracaoParaPace > 0)
+            ? CalcularPace(distanciaParaPace, duracaoParaPace)
+            : null;
 
         _treinoRepository.Atualizar(treino);
         await _treinoRepository.SalvarAlteracoesAsync();
@@ -331,6 +341,7 @@ public class TreinoService : ITreinoService
             TempoTotalSeg = s.TempoTotalSeg,
             DistanciaTotalM = s.DistanciaTotalM,
             PaceMedioSeg = s.PaceMedioSeg,
+            IgnorarNoPace = s.IgnorarNoPace,
             Observacoes = s.Observacoes,
             CreatedAt = s.CreatedAt,
             UpdatedAt = s.UpdatedAt

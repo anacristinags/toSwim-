@@ -25,5 +25,7 @@ public class SerieFichaRequestDto
 
     public bool IsGoalSeries { get; set; } = false;
 
+    public bool IgnorarNoPace { get; set; } = false;
+
     public string? Observacoes { get; set; }
 }

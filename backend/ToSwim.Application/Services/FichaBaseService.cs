@@ -129,6 +129,7 @@ public class FichaBaseService : IFichaBaseService
                 DistanciaM = serie.DistanciaM,
                 TempoPausaSeg = serie.TempoPausaSeg,
                 IsGoalSeries = serie.IsGoalSeries,
+                IgnorarNoPace = serie.IgnorarNoPace,
                 Observacoes = serie.Observacoes
             };
             await _serieRepository.CriarAsync(novaSerie);
@@ -169,6 +170,7 @@ public class FichaBaseService : IFichaBaseService
                 DistanciaM = s.DistanciaM,
                 TempoPausaSeg = s.TempoPausaSeg,
                 IsGoalSeries = s.IsGoalSeries,
+                IgnorarNoPace = s.IgnorarNoPace,
                 Observacoes = s.Observacoes,
                 CreatedAt = s.CreatedAt,
                 UpdatedAt = s.UpdatedAt

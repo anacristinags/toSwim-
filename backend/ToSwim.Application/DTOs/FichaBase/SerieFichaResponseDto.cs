@@ -10,6 +10,7 @@ public class SerieFichaResponseDto
     public int DistanciaM { get; set; }
     public decimal TempoPausaSeg { get; set; }
     public bool IsGoalSeries { get; set; }
+    public bool IgnorarNoPace { get; set; }
     public string? Observacoes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

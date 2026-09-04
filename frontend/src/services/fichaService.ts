@@ -9,6 +9,7 @@ export interface SerieFichaResponse {
   distanciaM: number
   tempoPausaSeg: number
   isGoalSeries: boolean
+  ignorarNoPace: boolean
   observacoes?: string | null
   createdAt: string
   updatedAt: string
@@ -38,6 +39,7 @@ export interface SerieFichaPayload {
   distanciaM: number
   tempoPausaSeg: number
   isGoalSeries?: boolean
+  ignorarNoPace?: boolean
   observacoes?: string
 }
 

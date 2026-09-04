@@ -60,6 +60,11 @@ public class SerieTreinoConfiguration : IEntityTypeConfiguration<SerieTreino>
             .HasColumnName("pace_medio_seg")
             .HasColumnType("numeric(10,2)");
 
+        builder.Property(s => s.IgnorarNoPace)
+            .HasColumnName("ignorar_no_pace")
+            .HasDefaultValue(false)
+            .IsRequired();
+
         builder.Property(s => s.Observacoes)
             .HasColumnName("observacoes")
             .HasColumnType("text");
@@ -90,12 +95,12 @@ public class SerieTreinoConfiguration : IEntityTypeConfiguration<SerieTreino>
             .HasForeignKey(s => s.CodMeta)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // Chave Única Composta: Ordem dentro do mesmo Treino
+        // Chave ï¿½nica Composta: Ordem dentro do mesmo Treino
         builder.HasIndex(s => new { s.CodTreino, s.Ordem })
             .IsUnique()
             .HasDatabaseName("uq_serie_treino_ordem");
 
-        // Índices criados na Migration 008
+        // ï¿½ndices criados na Migration 008
         builder.HasIndex(s => s.CodTreino)
             .HasDatabaseName("idx_serie_treino_treino");
 

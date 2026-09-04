@@ -206,7 +206,16 @@
             label="Observacoes (Opcional)"
             variant="outlined"
             density="comfortable"
+            class="mb-2"
           ></v-text-field>
+
+          <v-checkbox
+            v-model="novaSerie.ignorarNoPace"
+            label="Não considerar esta série no pace médio"
+            density="comfortable"
+            hide-details
+            aria-label="Não considerar esta série no pace médio"
+          ></v-checkbox>
         </v-card-text>
         <v-card-actions class="justify-end">
           <v-btn variant="text" @click="dialogNovaSerie = false">Cancelar</v-btn>
@@ -241,7 +250,8 @@ const novaSerie = ref({
   quantidadeRepeticoes: 4,
   distanciaM: 100,
   tempoPausaSeg: 20,
-  observacoes: ''
+  observacoes: '',
+  ignorarNoPace: false
 })
 
 const seriesDaFicha = (ficha: FichaBaseResponse) =>
@@ -333,7 +343,8 @@ const abrirAdicionarSerie = (ficha: FichaBaseResponse) => {
     quantidadeRepeticoes: 4,
     distanciaM: 100,
     tempoPausaSeg: 20,
-    observacoes: ''
+    observacoes: '',
+    ignorarNoPace: false
   }
   dialogNovaSerie.value = true
 }
@@ -347,6 +358,7 @@ const salvarNovaSerie = async () => {
     distanciaM: novaSerie.value.distanciaM,
     tempoPausaSeg: novaSerie.value.tempoPausaSeg,
     isGoalSeries: false,
+    ignorarNoPace: novaSerie.value.ignorarNoPace,
     observacoes: novaSerie.value.observacoes || undefined
   }
 

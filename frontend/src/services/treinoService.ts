@@ -13,6 +13,7 @@ export interface SerieTreinoResponse {
   tempoTotalSeg?: number | null
   distanciaTotalM?: number | null
   paceMedioSeg?: number | null
+  ignorarNoPace: boolean
   observacoes?: string | null
   createdAt: string
   updatedAt: string

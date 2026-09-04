@@ -138,21 +138,43 @@
           </h3>
           <v-list density="compact" class="bg-surface rounded-lg">
             <v-list-item
-              v-for="(s, idx) in treinoSelecionado.seriesTreino"
+              v-for="s in treinoSelecionado.seriesTreino"
               :key="s.codSerieTreino"
             >
               <template v-slot:prepend>
                 <v-avatar color="primary" size="24" class="text-caption mr-2">
-                  {{ Number(idx) + 1 }}
+                  {{ s.ordem }}
                 </v-avatar>
               </template>
-              <v-list-item-title class="font-weight-bold">
+              <v-list-item-title class="font-weight-bold d-flex align-center flex-wrap ga-2">
                 {{ s.quantidadeRepeticoesPlanejada }}x {{ s.distanciaPlanejadaM }}m
                 {{ nomeNado(s.tipoNado) }}
+                <v-chip
+                  v-if="s.ignorarNoPace"
+                  size="x-small"
+                  variant="tonal"
+                  color="default"
+                  title="Esta série não entra no cálculo do pace médio do treino"
+                >
+                  Fora do pace médio
+                </v-chip>
               </v-list-item-title>
               <v-list-item-subtitle>
-                Tempo acumulado: {{ formatarDuracao(s.tempoTotalSeg) }}
+                Realizado: {{ s.distanciaTotalM != null ? `${s.distanciaTotalM}m` : '--' }}
+                &nbsp;|&nbsp; Tempo total: {{ formatarDuracao(s.tempoTotalSeg) }}
+                &nbsp;|&nbsp; Pace: {{ formatarPace(s.paceMedioSeg) }} /100m
               </v-list-item-subtitle>
+
+              <div v-if="repeticoesPorSerie[s.codSerieTreino]?.length" class="mt-2 pl-2 border-s-thin">
+                <div
+                  v-for="rep in repeticoesPorSerie[s.codSerieTreino]"
+                  :key="rep.codRepeticaoSerieTreino"
+                  class="text-caption text-medium-emphasis"
+                >
+                  Repetição {{ rep.numeroRepeticao }}: {{ rep.distanciaRealM }}m em
+                  {{ formatarDuracao(rep.duracaoSeg) }} (pace {{ formatarPace(rep.paceSeg) }} /100m)
+                </div>
+              </div>
             </v-list-item>
           </v-list>
         </v-card-text>
@@ -168,12 +190,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import historicoService from '@/services/historicoService'
-import type { TreinoResponse } from '@/services/treinoService'
+import treinoService, { type RepeticaoResponse, type TreinoResponse } from '@/services/treinoService'
 import { extrairMensagemErro } from '@/services/erros'
 import { dataLocalISO, formatarData, formatarDuracao, formatarPace, nomeNado } from '@/services/formatacao'
 
 const dialogDetalhes = ref(false)
 const treinoSelecionado = ref<TreinoResponse | null>(null)
+const repeticoesPorSerie = ref<Record<number, RepeticaoResponse[]>>({})
 const historicoTreinos = ref<TreinoResponse[]>([])
 const filtroTitulo = ref('')
 const filtroData = ref('')
@@ -211,10 +234,28 @@ const carregarHistorico = async () => {
 const abrirDetalhes = async (codTreino: number) => {
   carregandoDetalhe.value = codTreino
   mensagem.value = null
+  repeticoesPorSerie.value = {}
 
   try {
-    treinoSelecionado.value = await historicoService.obter(codTreino)
+    const treino = await historicoService.obter(codTreino)
+    treinoSelecionado.value = treino
     dialogDetalhes.value = true
+
+    const resultados = await Promise.allSettled(
+      (treino.seriesTreino ?? []).map((serie) =>
+        treinoService
+          .listarRepeticoes(codTreino, serie.codSerieTreino)
+          .then((repeticoes) => ({ codSerieTreino: serie.codSerieTreino, repeticoes }))
+      )
+    )
+
+    const mapa: Record<number, RepeticaoResponse[]> = {}
+    for (const resultado of resultados) {
+      if (resultado.status === 'fulfilled') {
+        mapa[resultado.value.codSerieTreino] = resultado.value.repeticoes
+      }
+    }
+    repeticoesPorSerie.value = mapa
   } catch (error) {
     mensagem.value = {
       tipo: 'error',
