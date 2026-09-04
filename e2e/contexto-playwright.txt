@@ -1,0 +1,4066 @@
+﻿===== CONTEXTO DA SUITE PLAYWRIGHT =====
+Gerado em: 09/03/2026 23:38:23
+Repositorio: C:\Users\dtiDigital\source\repos\anacristinags\toSwim-
+
+===== STATUS DO GIT =====
+ M e2e/tests/ui/navegacao.spec.ts
+ M e2e/utils/auth.ts
+?? e2e/contexto-playwright.txt
+?? e2e/playwright-report/
+?? e2e/test-results/
+?? e2e/tests/api/fichas.spec.ts
+?? e2e/tests/api/historico.spec.ts
+?? e2e/tests/api/metas.spec.ts
+?? e2e/tests/api/metricas.spec.ts
+?? e2e/tests/api/piscina.spec.ts
+?? e2e/tests/api/treinos.spec.ts
+?? e2e/tests/ui/fichas.spec.ts
+?? e2e/tests/ui/historico.spec.ts
+?? e2e/tests/ui/metas.spec.ts
+?? e2e/tests/ui/piscina.spec.ts
+?? e2e/tests/ui/treinos.spec.ts
+?? e2e/utils/api.ts
+
+
+===== RESUMO DAS ALTERACOES DO GIT =====
+ e2e/tests/ui/navegacao.spec.ts |  5 +++++
+ e2e/utils/auth.ts              | 33 +++++++++++++++++++++++++++++++--
+ 2 files changed, 36 insertions(+), 2 deletions(-)
+
+
+===== COMMITS RECENTES =====
+97029d3 (HEAD -> develop, origin/develop) Corre├º├Áes
+0bccc94 Merge branch 'develop' of https://github.com/anacristinags/toSwim- into develop
+672c077 Integra├º├úo do front com o back
+a7152ea Merge pull request #1 from anacristinags/setup/playwright
+007fbfb (origin/setup/playwright) test: adiciona testes E2E com Playwright (UI + API)
+848d194 Melhorias
+fba9eea Telas e Ajustes do Frontend
+05590d9 Padroniza├º├úo dos Controllers
+6a68810 Hist├│rico
+0973f1a Treino e Repeti├º├Áes
+883ab2c ajustes do bug
+78abb6c Endpoint de Metas
+3c20d3f Ajustes
+0650d80 Config do swagger
+9de8ea6 Base de Treinos
+
+
+===== HISTORICO DE COMMITS RELACIONADOS AO E2E =====
+007fbfb (origin/setup/playwright) test: adiciona testes E2E com Playwright (UI + API)
+
+
+===== DIFERENCAS EM E2E E FRONTEND/SRC =====
+diff --git a/e2e/tests/ui/navegacao.spec.ts b/e2e/tests/ui/navegacao.spec.ts
+index 5bde3a2..42fa62e 100644
+--- a/e2e/tests/ui/navegacao.spec.ts
++++ b/e2e/tests/ui/navegacao.spec.ts
+@@ -1,6 +1,11 @@
+ import { test, expect } from '@playwright/test'
++import { autenticarNaPagina } from '../../utils/auth'
+ 
+ test.describe('Navega├º├úo principal', () => {
++  test.beforeEach(async ({ page, request }) => {
++    await autenticarNaPagina(page, request)
++  })
++
+   test('rota raiz redireciona para /fichas', async ({ page }) => {
+     await page.goto('/')
+     await expect(page).toHaveURL(/\/fichas$/)
+diff --git a/e2e/utils/auth.ts b/e2e/utils/auth.ts
+index d0e1acf..85fb4d0 100644
+--- a/e2e/utils/auth.ts
++++ b/e2e/utils/auth.ts
+@@ -1,4 +1,9 @@
+-import type { APIRequestContext } from '@playwright/test'
++import type { APIRequestContext, Page } from '@playwright/test'
++
++/** Mesma chave usada em frontend/src/services/tokenStorage.ts */
++export const CHAVE_TOKEN_FRONTEND = 'user_token'
++
++export const API_BASE = (process.env.API_URL ?? 'http://localhost:5064').replace(/\/$/, '')
+ 
+ export interface AtletaRegistrado {
+   nome: string
+@@ -7,6 +12,10 @@ export interface AtletaRegistrado {
+   token: string
+ }
+ 
++export function cabecalhoAuth(token: string): { Authorization: string } {
++  return { Authorization: `Bearer ${token}` }
++}
++
+ /**
+  * Gera um e-mail ├║nico por execu├º├úo para evitar colis├úo de registros
+  * (o campo ├® UNIQUE no banco) entre execu├º├Áes e workers em paralelo.
+@@ -28,7 +37,7 @@ export async function registrarAtleta(
+   const email = overrides.email ?? gerarEmailUnico()
+   const senha = overrides.senha ?? 'senha123'
+ 
+-  const response = await request.post('/auth/registro', {
++  const response = await request.post(`${API_BASE}/auth/registro`, {
+     data: { nome, email, senha },
+   })
+ 
+@@ -39,3 +48,23 @@ export async function registrarAtleta(
+   const body = await response.json()
+   return { nome, email, senha, token: body.token ?? body.Token }
+ }
++
++/**
++ * Injeta o JWT no localStorage antes do Vue inicializar o tokenStorage,
++ * para acessar rotas protegidas pelo router.
++ */
++export async function autenticarNaPagina(
++  page: Page,
++  request: APIRequestContext,
++): Promise<AtletaRegistrado> {
++  const atleta = await registrarAtleta(request)
++
++  await page.addInitScript(
++    ({ chave, token }) => {
++      localStorage.setItem(chave, token)
++    },
++    { chave: CHAVE_TOKEN_FRONTEND, token: atleta.token },
++  )
++
++  return atleta
++}
+
+
+===== ARQUIVOS DO PROJETO E2E =====
+
+===== ARQUIVO: package.json =====
+
+{
+  "name": "toswim-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Testes end-to-end (UI) e de API do toSwim com Playwright",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --project=web",
+    "test:api": "playwright test --project=api",
+    "test:headed": "playwright test --project=web --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen http://localhost:5173"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/node": "^24.13.3"
+  }
+}
+
+
+===== ARQUIVO: playwright.config.ts =====
+
+import { defineConfig, devices } from '@playwright/test'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+// Carrega variÃ¡veis de e2e/.env (se existir), sem depender de dotenv como dependÃªncia.
+try {
+  const dotenv = await import('node:fs')
+  const envPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '.env')
+  if (dotenv.existsSync(envPath)) {
+    for (const line of dotenv.readFileSync(envPath, 'utf-8').split('\n')) {
+      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/)
+      if (match && !process.env[match[1]]) process.env[match[1]] = match[2] ?? ''
+    }
+  }
+} catch {
+  // Sem .env definido â€” segue com os defaults abaixo.
+}
+
+const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173'
+const API_URL = process.env.API_URL ?? 'http://localhost:5064'
+const AUTOSTART_WEB = process.env.WEB_SERVER_AUTOSTART !== 'false'
+
+export default defineConfig({
+  testDir: './tests',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: process.env.CI ? [['html'], ['github']] : [['html'], ['list']],
+
+  use: {
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+  },
+
+  projects: [
+    {
+      name: 'web',
+      testDir: './tests/ui',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: FRONTEND_URL,
+      },
+    },
+    {
+      name: 'api',
+      testDir: './tests/api',
+      use: {
+        baseURL: API_URL,
+      },
+    },
+  ],
+
+  // Inicia automaticamente o frontend (Vite) antes dos testes de UI.
+  // A API (.NET + Postgres) precisa estar de pÃ© manualmente â€” ver e2e/README.md.
+  webServer: AUTOSTART_WEB
+    ? {
+        command: 'npm run dev',
+        cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'frontend'),
+        url: FRONTEND_URL,
+        reuseExistingServer: true,
+        timeout: 60_000,
+      }
+    : undefined,
+})
+
+
+===== ARQUIVO: README.md =====
+
+# toSwim E2E
+
+Testes end-to-end (UI) e de API do toSwim, usando [Playwright](https://playwright.dev/).
+
+## Estrutura
+
+```
+e2e/
+â”œâ”€â”€ playwright.config.ts   # 2 projetos: "web" (UI) e "api" (backend)
+â”œâ”€â”€ tests/
+â”‚   â”œâ”€â”€ ui/                 # testes de interface (Vue + Vuetify)
+â”‚   â”‚   â”œâ”€â”€ navegacao.spec.ts
+â”‚   â”‚   â””â”€â”€ cadastro.spec.ts
+â”‚   â””â”€â”€ api/                 # testes de API (.NET)
+â”‚       â”œâ”€â”€ auth.spec.ts
+â”‚       â””â”€â”€ users.spec.ts
+â””â”€â”€ utils/
+    â””â”€â”€ auth.ts             # helpers (registro de atleta de teste, etc.)
+```
+
+## PrÃ©-requisitos
+
+- Node.js 18+
+- Para os testes de **API**: backend (.NET) e Postgres em execuÃ§Ã£o
+  ```bash
+  # na raiz do repositÃ³rio
+  docker compose up -d postgres
+  docker compose run --rm liquibase
+  cd backend/ToSwim.Api
+  dotnet run
+  ```
+- Para os testes de **UI**: nada alÃ©m de instalar dependÃªncias â€” o Playwright
+  inicia o `npm run dev` do frontend automaticamente (porta 5173).
+
+## InstalaÃ§Ã£o
+
+```bash
+cd e2e
+npm install
+npx playwright install chromium   # ou "npx playwright install" para todos os browsers
+```
+
+Opcional: copie `.env.example` para `.env` para customizar as URLs:
+
+```bash
+cp .env.example .env
+```
+
+| VariÃ¡vel              | PadrÃ£o                  | DescriÃ§Ã£o                                   |
+|-----------------------|--------------------------|----------------------------------------------|
+| `FRONTEND_URL`        | http://localhost:5173    | URL do frontend usada pelos testes de UI     |
+| `API_URL`             | http://localhost:5064    | URL base da API usada pelos testes de API    |
+| `WEB_SERVER_AUTOSTART`| true                      | Se `false`, nÃ£o inicia o Vite automaticamente|
+
+## Executando os testes
+
+```bash
+npm test           # UI + API
+npm run test:ui     # apenas os testes de UI (projeto "web")
+npm run test:api    # apenas os testes de API (projeto "api")
+npm run test:headed # UI com navegador visÃ­vel
+npm run test:debug  # modo debug (Playwright Inspector)
+npm run report      # abre o Ãºltimo relatÃ³rio HTML
+```
+
+Para gerar testes gravando aÃ§Ãµes no navegador:
+
+```bash
+npm run codegen
+```
+
+## Notas
+
+- Os testes de API criam atletas com e-mails Ãºnicos (`utils/auth.ts`) para nÃ£o
+  colidir com a constraint UNIQUE de e-mail no banco entre execuÃ§Ãµes.
+- A tela de cadastro (`/cadastro`) ainda nÃ£o estÃ¡ integrada ao backend (apenas
+  exibe um `alert()`), entÃ£o os testes de UI cobrem validaÃ§Ã£o de formulÃ¡rio;
+  a integraÃ§Ã£o real de cadastro/login Ã© coberta pelos testes de API.
+
+
+===== ARQUIVO: tests\api\auth.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { gerarEmailUnico, registrarAtleta } from '../../utils/auth'
+
+test.describe('POST /auth/registro', () => {
+  test('registra um novo atleta e retorna token JWT', async ({ request }) => {
+    const email = gerarEmailUnico()
+
+    const response = await request.post('/auth/registro', {
+      data: { nome: 'Atleta de Teste', email, senha: 'senha123' },
+    })
+
+    expect(response.status()).toBe(201)
+
+    const body = await response.json()
+    expect(body).toMatchObject({ nome: 'Atleta de Teste', email })
+    expect(body.token ?? body.Token).toBeTruthy()
+  })
+
+  test('rejeita cadastro com e-mail invÃ¡lido', async ({ request }) => {
+    const response = await request.post('/auth/registro', {
+      data: { nome: 'Atleta InvÃ¡lido', email: 'nao-e-um-email', senha: 'senha123' },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
+  test('rejeita cadastro com senha curta', async ({ request }) => {
+    const response = await request.post('/auth/registro', {
+      data: { nome: 'Atleta InvÃ¡lido', email: gerarEmailUnico(), senha: '123' },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
+  test('rejeita e-mail duplicado', async ({ request }) => {
+    const email = gerarEmailUnico()
+    await registrarAtleta(request, { email })
+
+    const response = await request.post('/auth/registro', {
+      data: { nome: 'Outro Atleta', email, senha: 'senha123' },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+})
+
+test.describe('POST /auth/login', () => {
+  test('autentica um atleta previamente cadastrado', async ({ request }) => {
+    const { email, senha } = await registrarAtleta(request)
+
+    const response = await request.post('/auth/login', {
+      data: { email, senha },
+    })
+
+    expect(response.status()).toBe(200)
+    const body = await response.json()
+    expect(body.token ?? body.Token).toBeTruthy()
+  })
+
+  test('rejeita login com senha incorreta', async ({ request }) => {
+    const { email } = await registrarAtleta(request)
+
+    const response = await request.post('/auth/login', {
+      data: { email, senha: 'senha-errada' },
+    })
+
+    expect(response.status()).toBe(401)
+  })
+
+  test('rejeita login de e-mail nÃ£o cadastrado', async ({ request }) => {
+    const response = await request.post('/auth/login', {
+      data: { email: gerarEmailUnico('inexistente'), senha: 'senha123' },
+    })
+
+    expect(response.status()).toBe(401)
+  })
+})
+
+
+===== ARQUIVO: tests\api\fichas.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
+import { adicionarSerie, criarFicha } from '../../utils/api'
+
+test.describe('GET /fichas-base', () => {
+  test('retorna 401 sem token de autenticaÃ§Ã£o', async ({ request }) => {
+    const response = await request.get('/fichas-base')
+    expect(response.status()).toBe(401)
+  })
+
+  test('lista vazia para atleta recÃ©m-cadastrado', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.get('/fichas-base', {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(response.status()).toBe(200)
+    expect(await response.json()).toEqual([])
+  })
+})
+
+test.describe('POST /fichas-base', () => {
+  test('cria uma ficha base', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const titulo = `Treino tÃ©cnico ${Date.now()}`
+
+    const response = await request.post('/fichas-base', {
+      headers: cabecalhoAuth(token),
+      data: { tituloFicha: titulo, tipoFicha: 0 },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({ tituloFicha: titulo, tipoFicha: 0, status: 1 })
+    expect(body.codFicha ?? body.CodFicha).toBeTruthy()
+  })
+
+  test('rejeita ficha sem tÃ­tulo', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.post('/fichas-base', {
+      headers: cabecalhoAuth(token),
+      data: { tituloFicha: '', tipoFicha: 0 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+})
+
+test.describe('sÃ©ries e duplicaÃ§Ã£o de ficha', () => {
+  test('adiciona sÃ©rie, consulta a ficha e duplica', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha sÃ©ries ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+
+    const serieResponse = await request.post(`/fichas-base/${idFicha}/series`, {
+      headers: cabecalhoAuth(token),
+      data: {
+        tipoNado: 0,
+        quantidadeRepeticoes: 4,
+        distanciaM: 100,
+        tempoPausaSeg: 20,
+        isGoalSeries: false,
+        observacoes: 'aquecimento',
+      },
+    })
+
+    expect(serieResponse.status()).toBe(201)
+    const serie = await serieResponse.json()
+    expect(serie).toMatchObject({
+      tipoNado: 0,
+      quantidadeRepeticoes: 4,
+      distanciaM: 100,
+      tempoPausaSeg: 20,
+    })
+
+    const detalhe = await request.get(`/fichas-base/${idFicha}`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(detalhe.status()).toBe(200)
+    const bodyDetalhe = await detalhe.json()
+    const series = bodyDetalhe.series ?? bodyDetalhe.Series
+    expect(series).toHaveLength(1)
+
+    const duplicar = await request.post(`/fichas-base/${idFicha}/duplicar`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(duplicar.status()).toBe(201)
+    const copia = await duplicar.json()
+    expect(copia.fichaCopiada ?? copia.FichaCopiada).toBe(idFicha)
+    expect(copia.tituloFicha ?? copia.TituloFicha).toContain(ficha.tituloFicha ?? ficha.TituloFicha)
+  })
+
+  test('exclui ficha sem vÃ­nculos e some da listagem', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha para excluir ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+    await adicionarSerie(request, token, idFicha)
+
+    const excluir = await request.delete(`/fichas-base/${idFicha}`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(excluir.status()).toBe(204)
+
+    const lista = await request.get('/fichas-base', {
+      headers: cabecalhoAuth(token),
+    })
+    expect(await lista.json()).toEqual([])
+  })
+})
+
+
+===== ARQUIVO: tests\api\historico.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
+import { concluirTreinoComTempo, criarFichaComSerie, iniciarTreino } from '../../utils/api'
+
+test.describe('GET /historico/treinos', () => {
+  test('retorna 401 sem token de autenticaÃ§Ã£o', async ({ request }) => {
+    const response = await request.get('/historico/treinos')
+    expect(response.status()).toBe(401)
+  })
+
+  test('lista vazia quando nÃ£o hÃ¡ treinos concluÃ­dos', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.get('/historico/treinos', {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(response.status()).toBe(200)
+    expect(await response.json()).toEqual([])
+  })
+
+  test('lista o treino apÃ³s finalizaÃ§Ã£o e rejeita detalhe de treino em andamento', async ({
+    request,
+  }) => {
+    const { token } = await registrarAtleta(request)
+    const titulo = `Treino histÃ³rico ${Date.now()}`
+    const finalizado = await concluirTreinoComTempo(request, token, titulo)
+    const idFinalizado = finalizado.codTreino ?? finalizado.CodTreino
+
+    const lista = await request.get('/historico/treinos', {
+      headers: cabecalhoAuth(token),
+    })
+    expect(lista.status()).toBe(200)
+    const itens = await lista.json()
+    expect(itens).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tituloTreino: titulo, status: 1, distanciaTotalM: 100 }),
+      ]),
+    )
+
+    const detalhe = await request.get(`/historico/treinos/${idFinalizado}`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(detalhe.status()).toBe(200)
+    expect(await detalhe.json()).toMatchObject({ tituloTreino: titulo, status: 1 })
+
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha andamento ${Date.now()}`)
+    const emAndamento = await iniciarTreino(request, token, {
+      codFicha: idFicha,
+      tituloTreino: 'Ainda na Ã¡gua',
+    })
+    const idAndamento = emAndamento.codTreino ?? emAndamento.CodTreino
+
+    const detalheAndamento = await request.get(`/historico/treinos/${idAndamento}`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(detalheAndamento.status()).toBe(400)
+  })
+})
+
+
+===== ARQUIVO: tests\api\metas.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
+import { criarFichaComSerie, criarMeta } from '../../utils/api'
+
+test.describe('GET /metas', () => {
+  test('retorna 401 sem token de autenticaÃ§Ã£o', async ({ request }) => {
+    const response = await request.get('/metas')
+    expect(response.status()).toBe(401)
+  })
+
+  test('lista vazia para atleta sem metas', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.get('/metas', {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(response.status()).toBe(200)
+    expect(await response.json()).toEqual([])
+  })
+})
+
+test.describe('POST /metas', () => {
+  test('cria meta vinculada a uma sÃ©rie da ficha e calcula o pace alvo', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta ${Date.now()}`)
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: idSerie,
+        tituloMeta: 'Meta 100m Crawl',
+        tipoNado: 0,
+        distanciaAlvoM: 100,
+        tempoAlvoSeg: 75,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({
+      tituloMeta: 'Meta 100m Crawl',
+      tipoNado: 0,
+      distanciaAlvoM: 100,
+      tempoAlvoSeg: 75,
+      paceAlvoSeg: 75,
+      status: 0,
+      codSerieFicha: idSerie,
+    })
+  })
+
+  test('rejeita tempo alvo zero', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta invÃ¡lida ${Date.now()}`)
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: idSerie,
+        tituloMeta: 'Meta invÃ¡lida',
+        tipoNado: 0,
+        distanciaAlvoM: 100,
+        tempoAlvoSeg: 0,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+})
+
+test.describe('status e exclusÃ£o de meta', () => {
+  test('conclui e depois exclui a meta', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha status meta ${Date.now()}`)
+    const meta = await criarMeta(request, token, {
+      codSerieFicha: idSerie,
+      tituloMeta: 'Meta para concluir',
+    })
+    const idMeta = meta.codMeta ?? meta.CodMeta
+
+    const concluir = await request.put(`/metas/${idMeta}/status?status=1`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(concluir.status()).toBe(200)
+    expect((await concluir.json()).status).toBe(1)
+
+    const excluir = await request.delete(`/metas/${idMeta}`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(excluir.status()).toBe(204)
+
+    const lista = await request.get('/metas', { headers: cabecalhoAuth(token) })
+    expect(await lista.json()).toEqual([])
+  })
+})
+
+
+===== ARQUIVO: tests\api\metricas.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
+import { concluirTreinoComTempo, criarFichaComSerie, criarMeta } from '../../utils/api'
+
+test.describe('GET /dashboard/resumo e mÃ©tricas', () => {
+  test('retorna 401 em /dashboard/resumo sem token', async ({ request }) => {
+    const response = await request.get('/dashboard/resumo')
+    expect(response.status()).toBe(401)
+  })
+
+  test('resumo zerado para atleta sem treinos concluÃ­dos', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.get('/dashboard/resumo', {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(response.status()).toBe(200)
+    expect(await response.json()).toMatchObject({
+      totalTreinos: 0,
+      totalMetrosNadados: 0,
+      totalTempoSegundos: 0,
+      metasAtivasContagem: 0,
+      metasConcluidasContagem: 0,
+    })
+  })
+
+  test('resumo e evoluÃ§Ã£o de pace apÃ³s um treino concluÃ­do', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const titulo = `Treino mÃ©tricas ${Date.now()}`
+    await concluirTreinoComTempo(request, token, titulo)
+
+    const resumo = await request.get('/dashboard/resumo', {
+      headers: cabecalhoAuth(token),
+    })
+    expect(resumo.status()).toBe(200)
+    expect(await resumo.json()).toMatchObject({
+      totalTreinos: 1,
+      totalMetrosNadados: 100,
+      totalTempoSegundos: 70,
+    })
+
+    const pace = await request.get('/metricas/pace-medio', {
+      headers: cabecalhoAuth(token),
+    })
+    expect(pace.status()).toBe(200)
+    const evolucao = await pace.json()
+    expect(evolucao.length).toBeGreaterThan(0)
+    expect(evolucao[0]).toMatchObject({
+      tituloTreino: titulo,
+      tipoNado: 0,
+      distanciaM: 100,
+    })
+
+    const recordes = await request.get('/metricas/melhores-tempos', {
+      headers: cabecalhoAuth(token),
+    })
+    expect(recordes.status()).toBe(200)
+    expect(Array.isArray(await recordes.json())).toBe(true)
+  })
+
+  test('progresso de meta inicia em zero sem tentativas', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha progresso ${Date.now()}`)
+    const meta = await criarMeta(request, token, {
+      codSerieFicha: idSerie,
+      tituloMeta: 'Meta sem tentativas',
+    })
+    const idMeta = meta.codMeta ?? meta.CodMeta
+
+    const response = await request.get(`/metas/${idMeta}/progresso`, {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(response.status()).toBe(200)
+    expect(await response.json()).toMatchObject({
+      codMeta: idMeta,
+      tituloMeta: 'Meta sem tentativas',
+      percentualAtingimento: 0,
+    })
+  })
+})
+
+
+===== ARQUIVO: tests\api\piscina.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
+
+test.describe('GET /piscina-configuracao/me', () => {
+  test('retorna 401 sem token de autenticaÃ§Ã£o', async ({ request }) => {
+    const response = await request.get('/piscina-configuracao/me')
+    expect(response.status()).toBe(401)
+  })
+
+  test('retorna 404 quando o atleta ainda nÃ£o configurou a piscina', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.get('/piscina-configuracao/me', {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(response.status()).toBe(404)
+    const body = await response.json()
+    expect(body.erro).toBeTruthy()
+  })
+})
+
+test.describe('POST /piscina-configuracao', () => {
+  test('cria a configuraÃ§Ã£o de piscina do atleta autenticado', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.post('/piscina-configuracao', {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 25, formaContagem: 0 },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({
+      tamanhoM: 25,
+      formaContagem: 0,
+      status: 1,
+    })
+    expect(body.codPiscina ?? body.CodPiscina).toBeTruthy()
+  })
+
+  test('rejeita tamanho de piscina invÃ¡lido', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.post('/piscina-configuracao', {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 30, formaContagem: 0 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
+  test('rejeita segunda configuraÃ§Ã£o para o mesmo atleta', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    await request.post('/piscina-configuracao', {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 25, formaContagem: 0 },
+    })
+
+    const response = await request.post('/piscina-configuracao', {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 50, formaContagem: 1 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+})
+
+test.describe('PUT /piscina-configuracao/me', () => {
+  test('atualiza a configuraÃ§Ã£o existente', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    await request.post('/piscina-configuracao', {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 25, formaContagem: 0 },
+    })
+
+    const response = await request.put('/piscina-configuracao/me', {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 50, formaContagem: 1 },
+    })
+
+    expect(response.status()).toBe(200)
+    const body = await response.json()
+    expect(body).toMatchObject({ tamanhoM: 50, formaContagem: 1 })
+  })
+})
+
+
+===== ARQUIVO: tests\api\treinos.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
+import {
+  criarConfigPiscina,
+  criarFicha,
+  criarFichaComSerie,
+  iniciarTreino,
+  seriesDoTreino,
+} from '../../utils/api'
+
+test.describe('POST /treinos', () => {
+  test('retorna 401 sem token de autenticaÃ§Ã£o', async ({ request }) => {
+    const response = await request.post('/treinos', {
+      data: { codFicha: 1, tituloTreino: 'X', tamanhoPiscinaM: 25 },
+    })
+    expect(response.status()).toBe(401)
+  })
+
+  test('inicia um treino a partir de uma ficha com sÃ©ries', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token)
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha execuÃ§Ã£o ${Date.now()}`)
+
+    const response = await request.post('/treinos', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codFicha: idFicha,
+        tituloTreino: 'Treino do dia',
+        observacao: 'foco na pernada',
+        tamanhoPiscinaM: 25,
+      },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({
+      tituloTreino: 'Treino do dia',
+      observacao: 'foco na pernada',
+      tamanhoPiscinaM: 25,
+      status: 0,
+      codFicha: idFicha,
+    })
+    expect(seriesDoTreino(body)).toHaveLength(1)
+  })
+
+  test('rejeita tamanho de piscina invÃ¡lido ao iniciar', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha piscina invÃ¡lida ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+
+    const response = await request.post('/treinos', {
+      headers: cabecalhoAuth(token),
+      data: { codFicha: idFicha, tituloTreino: 'InvÃ¡lido', tamanhoPiscinaM: 33 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+})
+
+test.describe('execuÃ§Ã£o, repetiÃ§Ã£o, finalizar e cancelar', () => {
+  test('registra tiro, atualiza a sÃ©rie e finaliza o treino', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token)
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha finalizar ${Date.now()}`)
+    const treino = await iniciarTreino(request, token, {
+      codFicha: idFicha,
+      tituloTreino: 'Finalizar via API',
+    })
+    const idTreino = treino.codTreino ?? treino.CodTreino
+    const serie = seriesDoTreino(treino)[0]
+    const idSerie = serie.codSerieTreino ?? serie.CodSerieTreino
+
+    const repeticao = await request.post(`/treinos/${idTreino}/series/${idSerie}/repeticoes`, {
+      headers: cabecalhoAuth(token),
+      data: { numeroRepeticao: 1, distanciaRealM: 100, duracaoSeg: 70 },
+    })
+    expect(repeticao.status()).toBe(201)
+    const tiro = await repeticao.json()
+    expect(tiro).toMatchObject({ numeroRepeticao: 1, distanciaRealM: 100, duracaoSeg: 70 })
+    expect(tiro.paceSeg ?? tiro.PaceSeg).toBe(70)
+
+    const atualizarSerie = await request.put(`/treinos/${idTreino}/series/${idSerie}`, {
+      headers: cabecalhoAuth(token),
+      data: {
+        ordem: 1,
+        tipoNado: 0,
+        quantidadeRepeticoesPlanejada: 4,
+        distanciaPlanejadaM: 100,
+        tempoPausaSeg: 20,
+        tempoTotalSeg: 70,
+        distanciaTotalM: 100,
+      },
+    })
+    expect(atualizarSerie.status()).toBe(200)
+
+    const finalizar = await request.put(`/treinos/${idTreino}/finalizar`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(finalizar.status()).toBe(200)
+    expect(await finalizar.json()).toMatchObject({
+      status: 1,
+      distanciaTotalM: 100,
+      duracaoTotalSeg: 70,
+    })
+  })
+
+  test('cancela treino em andamento', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token)
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha cancelar ${Date.now()}`)
+    const treino = await iniciarTreino(request, token, {
+      codFicha: idFicha,
+      tituloTreino: 'Cancelar via API',
+    })
+    const idTreino = treino.codTreino ?? treino.CodTreino
+
+    const cancelar = await request.put(`/treinos/${idTreino}/cancelar`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(cancelar.status()).toBe(200)
+    expect((await cancelar.json()).status).toBe(2)
+  })
+
+  test('rejeita repetiÃ§Ã£o com duraÃ§Ã£o zero', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token)
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha tiro invÃ¡lido ${Date.now()}`)
+    const treino = await iniciarTreino(request, token, {
+      codFicha: idFicha,
+      tituloTreino: 'Tiro invÃ¡lido',
+    })
+    const idTreino = treino.codTreino ?? treino.CodTreino
+    const idSerie = seriesDoTreino(treino)[0].codSerieTreino ?? seriesDoTreino(treino)[0].CodSerieTreino
+
+    const response = await request.post(`/treinos/${idTreino}/series/${idSerie}/repeticoes`, {
+      headers: cabecalhoAuth(token),
+      data: { numeroRepeticao: 1, distanciaRealM: 100, duracaoSeg: 0 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+})
+
+
+===== ARQUIVO: tests\api\users.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { registrarAtleta } from '../../utils/auth'
+
+test.describe('GET /users/me', () => {
+  test('retorna 401 sem token de autenticaÃ§Ã£o', async ({ request }) => {
+    const response = await request.get('/users/me')
+    expect(response.status()).toBe(401)
+  })
+
+  test('retorna os dados do atleta autenticado', async ({ request }) => {
+    const { nome, email, token } = await registrarAtleta(request)
+
+    const response = await request.get('/users/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    expect(response.status()).toBe(200)
+    const body = await response.json()
+    expect(body).toMatchObject({ nome, email })
+  })
+})
+
+
+===== ARQUIVO: tests\ui\cadastro.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+
+test.describe('Tela de cadastro de atleta', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/cadastro')
+  })
+
+  test('exibe o formulÃ¡rio de cadastro', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Criar Conta no toSwim' })).toBeVisible()
+    await expect(page.getByLabel('Nome Completo')).toBeVisible()
+    await expect(page.getByLabel('E-mail')).toBeVisible()
+    await expect(page.getByLabel('Senha', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Confirmar Senha')).toBeVisible()
+  })
+
+  test('botÃ£o de cadastro fica desabilitado enquanto o formulÃ¡rio Ã© invÃ¡lido', async ({ page }) => {
+    const botaoCadastrar = page.getByRole('button', { name: 'Cadastrar Atleta' })
+    await expect(botaoCadastrar).toBeDisabled()
+  })
+
+  test('habilita o envio apÃ³s preencher os campos corretamente', async ({ page }) => {
+    await page.getByLabel('Nome Completo').fill('Atleta de Teste')
+    await page.getByLabel('E-mail').fill(`atleta.${Date.now()}@toswim.com`)
+    await page.getByLabel('Senha', { exact: true }).fill('senha123')
+    await page.getByLabel('Confirmar Senha').fill('senha123')
+
+    await expect(page.getByRole('button', { name: 'Cadastrar Atleta' })).toBeEnabled()
+  })
+
+  test('valida senha e confirmaÃ§Ã£o de senha diferentes', async ({ page }) => {
+    await page.getByLabel('Nome Completo').fill('Atleta de Teste')
+    await page.getByLabel('E-mail').fill('atleta@toswim.com')
+    await page.getByLabel('Senha', { exact: true }).fill('senha123')
+    await page.getByLabel('Confirmar Senha').fill('outrasenha')
+    await page.getByLabel('Confirmar Senha').blur()
+
+    await expect(page.getByText('As senhas nÃ£o coincidem')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cadastrar Atleta' })).toBeDisabled()
+  })
+})
+
+
+===== ARQUIVO: tests\ui\fichas.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { autenticarNaPagina } from '../../utils/auth'
+
+test.describe('Tela de fichas de treino', () => {
+  test('exibe estado vazio para atleta sem fichas', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/fichas')
+
+    await expect(page.getByRole('heading', { name: 'Fichas de Treino Base' })).toBeVisible()
+    await expect(
+      page.getByText('Nenhuma ficha ativa ainda. Crie a primeira para montar seus treinos.'),
+    ).toBeVisible()
+    await expect(page.getByText('Fichas: 0 / 5 Ativas')).toBeVisible()
+  })
+
+  test('cria uma ficha e adiciona uma sÃ©rie', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/fichas')
+
+    const titulo = `Treino velocidade ${Date.now()}`
+
+    await page.getByRole('button', { name: 'Nova Ficha' }).click()
+    await expect(page.getByRole('heading', { name: 'Criar Nova Ficha Base' })).toBeVisible()
+    await page.getByLabel('Titulo da Ficha (Ex: Treino de Velocidade 1500m)').fill(titulo)
+    await page.getByRole('button', { name: 'Criar Ficha' }).click()
+
+    await expect(page.getByText('Ficha criada com sucesso.')).toBeVisible()
+    await expect(page.getByText(titulo)).toBeVisible()
+    await expect(page.getByText('0 series cadastradas')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Adicionar Serie' }).click()
+    await expect(page.getByRole('heading', { name: 'Adicionar Serie ao Treino' })).toBeVisible()
+    await page.getByRole('button', { name: 'Adicionar Serie' }).last().click()
+
+    await expect(page.getByText('Serie adicionada com sucesso.')).toBeVisible()
+    await expect(page.getByText('4x 100m - Crawl')).toBeVisible()
+    await expect(page.getByText('Pausa: 20s | Sem observacoes')).toBeVisible()
+  })
+})
+
+
+===== ARQUIVO: tests\ui\historico.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { autenticarNaPagina } from '../../utils/auth'
+import { concluirTreinoComTempo } from '../../utils/api'
+
+test.describe('Tela de histÃ³rico de treinos', () => {
+  test('exibe estado vazio quando nÃ£o hÃ¡ treinos concluÃ­dos', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/historico')
+
+    await expect(page.getByRole('heading', { name: 'Historico de Treinos' })).toBeVisible()
+    await expect(
+      page.getByText('Nenhum treino concluido ainda. Finalize um treino na tela de Execucao.'),
+    ).toBeVisible()
+  })
+
+  test('lista treino concluÃ­do e abre o detalhe', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    const titulo = `Sessao historico ${Date.now()}`
+    await concluirTreinoComTempo(request, atleta.token, titulo)
+
+    await page.goto('/historico')
+    await expect(page.getByText(titulo)).toBeVisible()
+    await expect(page.getByText('100m')).toBeVisible()
+    await expect(page.getByLabel('Filtrar por titulo')).toBeVisible()
+
+    await page.getByRole('button').filter({ has: page.locator('.mdi-eye-outline') }).click()
+
+    await expect(page.getByText(`Realizado em`)).toBeVisible()
+    await expect(page.getByText('Series Executadas')).toBeVisible()
+    await expect(page.getByText('4x 100m Crawl')).toBeVisible()
+    await page.getByRole('button', { name: 'Fechar' }).click()
+  })
+})
+
+
+===== ARQUIVO: tests\ui\metas.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { autenticarNaPagina } from '../../utils/auth'
+import { criarFichaComSerie } from '../../utils/api'
+
+test.describe('Tela de metas de tempo', () => {
+  test('botÃ£o Nova Meta fica desabilitado sem sÃ©ries de ficha', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/metas')
+
+    await expect(page.getByRole('heading', { name: 'Metas de Tempo' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Nova Meta' })).toBeDisabled()
+    await expect(page.getByText('Nenhuma meta encontrada para este filtro.')).toBeVisible()
+  })
+
+  test('cria uma meta a partir de uma sÃ©rie existente', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    await criarFichaComSerie(request, atleta.token, `Ficha para meta UI ${Date.now()}`)
+
+    await page.goto('/metas')
+    await expect(page.getByRole('button', { name: 'Nova Meta' })).toBeEnabled()
+
+    await page.getByRole('button', { name: 'Nova Meta' }).click()
+    await expect(page.getByRole('heading', { name: 'Criar Meta de Tempo' })).toBeVisible()
+
+    const titulo = `Meta UI ${Date.now()}`
+    await page.getByLabel('Titulo da Meta').fill(titulo)
+    await page.getByRole('button', { name: 'Criar Meta' }).click()
+
+    await expect(page.getByText('Meta criada com sucesso.')).toBeVisible()
+    await expect(page.getByText(titulo)).toBeVisible()
+    await expect(page.getByText('Em Andamento')).toBeVisible()
+  })
+})
+
+
+===== ARQUIVO: tests\ui\navegacao.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { autenticarNaPagina } from '../../utils/auth'
+
+test.describe('NavegaÃ§Ã£o principal', () => {
+  test.beforeEach(async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+  })
+
+  test('rota raiz redireciona para /fichas', async ({ page }) => {
+    await page.goto('/')
+    await expect(page).toHaveURL(/\/fichas$/)
+  })
+
+  test('barra de topo exibe o nome da aplicaÃ§Ã£o', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('toSwim App')).toBeVisible()
+  })
+
+  test('menu lateral navega entre as telas', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByRole('link', { name: 'Executar Treino' }).click()
+    await expect(page).toHaveURL(/\/treino-execucao$/)
+
+    await page.getByRole('link', { name: 'Metas de Tempo' }).click()
+    await expect(page).toHaveURL(/\/metas$/)
+
+    await page.getByRole('link', { name: 'HistÃ³rico' }).click()
+    await expect(page).toHaveURL(/\/historico$/)
+
+    await page.getByRole('link', { name: 'ConfiguraÃ§Ã£o Piscina' }).click()
+    await expect(page).toHaveURL(/\/piscina$/)
+  })
+})
+
+
+===== ARQUIVO: tests\ui\piscina.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { autenticarNaPagina } from '../../utils/auth'
+
+test.describe('Tela de configuraÃ§Ã£o da piscina', () => {
+  test('exibe o formulÃ¡rio e salva a configuraÃ§Ã£o padrÃ£o', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/piscina')
+
+    await expect(page.getByRole('heading', { name: 'Configuracao da Piscina' })).toBeVisible()
+    await expect(page.getByText('Piscina Curta (25 Metros)')).toBeVisible()
+    await expect(page.getByText('Piscina Olimpica (50 Metros)')).toBeVisible()
+    await expect(page.getByText('Por Distancia Absoluta em Metros (Ex: 100m, 200m)')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Salvar Configuracoes' }).click()
+
+    await expect(page.getByText('Configuracoes da piscina salvas com sucesso!')).toBeVisible()
+  })
+
+  test('permite alterar para piscina olÃ­mpica e salvar novamente', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/piscina')
+
+    await page.getByRole('radio', { name: 'Piscina Curta (25 Metros)' }).check()
+    await page.getByRole('button', { name: 'Salvar Configuracoes' }).click()
+    await expect(page.getByText('Configuracoes da piscina salvas com sucesso!')).toBeVisible()
+
+    await page.getByRole('radio', { name: 'Piscina Olimpica (50 Metros)' }).check()
+    await page.getByRole('radio', { name: 'Por Numero de Voltas/Piscinas (Ex: 4 voltas, 8 voltas)' }).check()
+    await page.getByRole('button', { name: 'Salvar Configuracoes' }).click()
+
+    await expect(page.getByText('Configuracoes da piscina salvas com sucesso!')).toBeVisible()
+  })
+})
+
+
+===== ARQUIVO: tests\ui\treinos.spec.ts =====
+
+import { test, expect } from '@playwright/test'
+import { autenticarNaPagina } from '../../utils/auth'
+import { criarConfigPiscina, criarFichaComSerie } from '../../utils/api'
+
+test.describe('Tela de execuÃ§Ã£o do treino', () => {
+  test('alerta para configurar a piscina antes de treinar', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/treino-execucao')
+
+    await expect(page.getByRole('heading', { name: 'Execucao do Treino do Dia' })).toBeVisible()
+    await expect(
+      page.getByText('Configure o tamanho da piscina antes de iniciar um treino.'),
+    ).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Ir para configuracao' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Iniciar Treino na Piscina' })).toBeDisabled()
+  })
+
+  test('inicia o treino, registra um tempo e finaliza', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    const tituloFicha = `Ficha execuÃ§Ã£o UI ${Date.now()}`
+    await criarConfigPiscina(request, atleta.token)
+    await criarFichaComSerie(request, atleta.token, tituloFicha)
+
+    await page.goto('/treino-execucao')
+    await expect(page.getByRole('heading', { name: 'Escolha a Ficha para Treinar Hoje' })).toBeVisible()
+
+    await page.getByLabel('Selecione uma Ficha Base').click()
+    await page.getByRole('option', { name: tituloFicha }).click()
+
+    await expect(page.getByLabel('Titulo do treino do dia')).toHaveValue(tituloFicha)
+    await page.getByRole('button', { name: 'Iniciar Treino na Piscina' }).click()
+
+    await expect(page.getByText('Treino em Andamento')).toBeVisible()
+    await expect(page.getByText(/Serie 1:/)).toBeVisible()
+
+    await page.getByLabel('Tempo (seg)').first().fill('70')
+    await page.getByRole('button', { name: 'Finalizar Treino' }).click()
+
+    await expect(
+      page.getByText('Treino finalizado! Confira o resultado no Historico.'),
+    ).toBeVisible()
+  })
+})
+
+
+===== ARQUIVO: tsconfig.json =====
+
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": ["playwright.config.ts", "tests/**/*.ts", "utils/**/*.ts"]
+}
+
+
+===== ARQUIVO: utils\api.ts =====
+
+import type { APIRequestContext } from '@playwright/test'
+import { API_BASE, cabecalhoAuth } from './auth'
+
+async function jsonOk(response: { ok: () => boolean; status: () => number; text: () => Promise<string>; json: () => Promise<any> }) {
+  if (!response.ok()) {
+    throw new Error(`Falha na API de teste: ${response.status()} ${await response.text()}`)
+  }
+  return response.json()
+}
+
+export async function criarConfigPiscina(
+  request: APIRequestContext,
+  token: string,
+  dados: { tamanhoM?: number; formaContagem?: number } = {},
+) {
+  const response = await request.post(`${API_BASE}/piscina-configuracao`, {
+    headers: cabecalhoAuth(token),
+    data: {
+      tamanhoM: dados.tamanhoM ?? 25,
+      formaContagem: dados.formaContagem ?? 0,
+    },
+  })
+  return jsonOk(response)
+}
+
+export async function criarFicha(
+  request: APIRequestContext,
+  token: string,
+  tituloFicha: string,
+  tipoFicha = 0,
+) {
+  const response = await request.post(`${API_BASE}/fichas-base`, {
+    headers: cabecalhoAuth(token),
+    data: { tituloFicha, tipoFicha },
+  })
+  return jsonOk(response)
+}
+
+export async function adicionarSerie(
+  request: APIRequestContext,
+  token: string,
+  idFicha: number,
+  dados: {
+    tipoNado?: number
+    quantidadeRepeticoes?: number
+    distanciaM?: number
+    tempoPausaSeg?: number
+    observacoes?: string
+  } = {},
+) {
+  const response = await request.post(`${API_BASE}/fichas-base/${idFicha}/series`, {
+    headers: cabecalhoAuth(token),
+    data: {
+      tipoNado: dados.tipoNado ?? 0,
+      quantidadeRepeticoes: dados.quantidadeRepeticoes ?? 4,
+      distanciaM: dados.distanciaM ?? 100,
+      tempoPausaSeg: dados.tempoPausaSeg ?? 20,
+      isGoalSeries: false,
+      observacoes: dados.observacoes,
+    },
+  })
+  return jsonOk(response)
+}
+
+export async function criarFichaComSerie(
+  request: APIRequestContext,
+  token: string,
+  tituloFicha: string,
+) {
+  const ficha = await criarFicha(request, token, tituloFicha)
+  const idFicha = ficha.codFicha ?? ficha.CodFicha
+  const serie = await adicionarSerie(request, token, idFicha)
+  return { ficha, serie, idFicha, idSerie: serie.codSerieFicha ?? serie.CodSerieFicha }
+}
+
+export async function criarMeta(
+  request: APIRequestContext,
+  token: string,
+  dados: {
+    codSerieFicha: number
+    tituloMeta: string
+    tipoNado?: number
+    distanciaAlvoM?: number
+    tempoAlvoSeg?: number
+    modoAvaliacao?: number
+  },
+) {
+  const response = await request.post(`${API_BASE}/metas`, {
+    headers: cabecalhoAuth(token),
+    data: {
+      tipoNado: 0,
+      distanciaAlvoM: 100,
+      tempoAlvoSeg: 75,
+      modoAvaliacao: 0,
+      ...dados,
+    },
+  })
+  return jsonOk(response)
+}
+
+export async function iniciarTreino(
+  request: APIRequestContext,
+  token: string,
+  dados: { codFicha: number; tituloTreino: string; tamanhoPiscinaM?: number; observacao?: string },
+) {
+  const response = await request.post(`${API_BASE}/treinos`, {
+    headers: cabecalhoAuth(token),
+    data: {
+      tamanhoPiscinaM: 25,
+      ...dados,
+    },
+  })
+  return jsonOk(response)
+}
+
+export function seriesDoTreino(treino: any): any[] {
+  return treino.seriesTreino ?? treino.SeriesTreino ?? []
+}
+
+export async function concluirTreinoComTempo(
+  request: APIRequestContext,
+  token: string,
+  tituloTreino: string,
+) {
+  await criarConfigPiscina(request, token)
+  const { idFicha } = await criarFichaComSerie(request, token, `Ficha ${tituloTreino}`)
+  const treino = await iniciarTreino(request, token, { codFicha: idFicha, tituloTreino })
+  const idTreino = treino.codTreino ?? treino.CodTreino
+  const serie = seriesDoTreino(treino)[0]
+  const idSerie = serie.codSerieTreino ?? serie.CodSerieTreino
+  const distancia = serie.distanciaPlanejadaM ?? serie.DistanciaPlanejadaM
+  const duracaoSeg = 70
+
+  const repeticao = await request.post(
+    `${API_BASE}/treinos/${idTreino}/series/${idSerie}/repeticoes`,
+    {
+      headers: cabecalhoAuth(token),
+      data: { numeroRepeticao: 1, distanciaRealM: distancia, duracaoSeg },
+    },
+  )
+  await jsonOk(repeticao)
+
+  const atualizarSerie = await request.put(`${API_BASE}/treinos/${idTreino}/series/${idSerie}`, {
+    headers: cabecalhoAuth(token),
+    data: {
+      codSerieFicha: serie.codSerieFicha ?? serie.CodSerieFicha,
+      ordem: serie.ordem ?? serie.Ordem,
+      tipoNado: serie.tipoNado ?? serie.TipoNado,
+      quantidadeRepeticoesPlanejada:
+        serie.quantidadeRepeticoesPlanejada ?? serie.QuantidadeRepeticoesPlanejada,
+      distanciaPlanejadaM: distancia,
+      tempoPausaSeg: serie.tempoPausaSeg ?? serie.TempoPausaSeg,
+      tempoTotalSeg: duracaoSeg,
+      distanciaTotalM: distancia,
+      observacoes: serie.observacoes ?? serie.Observacoes,
+    },
+  })
+  await jsonOk(atualizarSerie)
+
+  const finalizar = await request.put(`${API_BASE}/treinos/${idTreino}/finalizar`, {
+    headers: cabecalhoAuth(token),
+  })
+  return jsonOk(finalizar)
+}
+
+
+===== ARQUIVO: utils\auth.ts =====
+
+import type { APIRequestContext, Page } from '@playwright/test'
+
+/** Mesma chave usada em frontend/src/services/tokenStorage.ts */
+export const CHAVE_TOKEN_FRONTEND = 'user_token'
+
+export const API_BASE = (process.env.API_URL ?? 'http://localhost:5064').replace(/\/$/, '')
+
+export interface AtletaRegistrado {
+  nome: string
+  email: string
+  senha: string
+  token: string
+}
+
+export function cabecalhoAuth(token: string): { Authorization: string } {
+  return { Authorization: `Bearer ${token}` }
+}
+
+/**
+ * Gera um e-mail Ãºnico por execuÃ§Ã£o para evitar colisÃ£o de registros
+ * (o campo Ã© UNIQUE no banco) entre execuÃ§Ãµes e workers em paralelo.
+ */
+export function gerarEmailUnico(prefixo = 'atleta'): string {
+  const sufixo = `${Date.now()}-${Math.floor(Math.random() * 100000)}`
+  return `${prefixo}.${sufixo}@toswim.test`
+}
+
+/**
+ * Registra um novo atleta via API e retorna os dados usados + o token JWT
+ * emitido, para reaproveitar em testes que dependem de um usuÃ¡rio autenticado.
+ */
+export async function registrarAtleta(
+  request: APIRequestContext,
+  overrides: Partial<{ nome: string; email: string; senha: string }> = {},
+): Promise<AtletaRegistrado> {
+  const nome = overrides.nome ?? 'Atleta de Teste'
+  const email = overrides.email ?? gerarEmailUnico()
+  const senha = overrides.senha ?? 'senha123'
+
+  const response = await request.post(`${API_BASE}/auth/registro`, {
+    data: { nome, email, senha },
+  })
+
+  if (!response.ok()) {
+    throw new Error(`Falha ao registrar atleta de teste: ${response.status()} ${await response.text()}`)
+  }
+
+  const body = await response.json()
+  return { nome, email, senha, token: body.token ?? body.Token }
+}
+
+/**
+ * Injeta o JWT no localStorage antes do Vue inicializar o tokenStorage,
+ * para acessar rotas protegidas pelo router.
+ */
+export async function autenticarNaPagina(
+  page: Page,
+  request: APIRequestContext,
+): Promise<AtletaRegistrado> {
+  const atleta = await registrarAtleta(request)
+
+  await page.addInitScript(
+    ({ chave, token }) => {
+      localStorage.setItem(chave, token)
+    },
+    { chave: CHAVE_TOKEN_FRONTEND, token: atleta.token },
+  )
+
+  return atleta
+}
+
+
+===== ARQUIVOS RELEVANTES DO FRONTEND =====
+
+===== ARQUIVO: frontend\src\components\AppLayout.vue =====
+
+<template>
+  <v-app>
+    <!-- Navigation Drawer (Menu Lateral) -->
+    <v-navigation-drawer v-model="drawer" persistent elevation="2">
+      <v-list-item
+        prepend-icon="mdi-waves"
+        title="toSwim"
+        subtitle="Natação & Performance"
+        class="py-4 text-primary"
+      ></v-list-item>
+
+      <v-divider></v-divider>
+
+      <v-list density="compact" nav>
+        <v-list-item
+          prepend-icon="mdi-clipboard-text-outline"
+          title="Fichas de Treino"
+          value="fichas"
+          to="/fichas"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-play-circle-outline"
+          title="Executar Treino"
+          value="treino-execucao"
+          to="/treino-execucao"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-target"
+          title="Metas de Tempo"
+          value="metas"
+          to="/metas"
+        ></v-list-item>
+
+        <v-list-item
+          prepend-icon="mdi-history"
+          title="Histórico"
+          value="historico"
+          to="/historico"
+        ></v-list-item>
+
+        <v-divider class="my-2"></v-divider>
+
+        <v-list-item
+          prepend-icon="mdi-pool"
+          title="Configuração Piscina"
+          value="piscina"
+          to="/piscina"
+        ></v-list-item>
+
+        <template v-if="autenticado">
+          <v-list-item
+            prepend-icon="mdi-logout-variant"
+            title="Sair"
+            value="sair"
+            @click="sair"
+          ></v-list-item>
+        </template>
+
+        <template v-else>
+          <v-list-item
+            prepend-icon="mdi-login-variant"
+            title="Entrar"
+            value="login"
+            to="/login"
+          ></v-list-item>
+
+          <v-list-item
+            prepend-icon="mdi-account-plus-outline"
+            title="Criar Conta"
+            value="cadastro"
+            to="/cadastro"
+          ></v-list-item>
+        </template>
+      </v-list>
+    </v-navigation-drawer>
+
+    <!-- Top Bar Principal -->
+    <v-app-bar elevation="1">
+      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+      <v-toolbar-title class="text-subtitle-1 text-md-h6 font-weight-bold">
+        toSwim App
+      </v-toolbar-title>
+
+      <v-spacer></v-spacer>
+
+      <v-chip color="primary" variant="outlined" class="mr-4">
+        <v-icon start icon="mdi-pool"></v-icon>
+        Piscina: 25m
+      </v-chip>
+    </v-app-bar>
+
+    <!-- Conteúdo Principal Dinâmico -->
+    <v-main>
+      <v-container fluid class="pa-4 pa-md-6">
+        <slot></slot>
+      </v-container>
+    </v-main>
+  </v-app>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import authService from '@/services/authService'
+import { autenticado } from '@/services/tokenStorage'
+
+const router = useRouter()
+const drawer = ref(true)
+
+const sair = () => {
+  authService.logout()
+  router.push({ name: 'login' })
+}
+</script>
+
+
+===== ARQUIVO: frontend\src\components\HelloWorld.vue =====
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import viteLogo from '../assets/vite.svg'
+import heroImg from '../assets/hero.png'
+import vueLogo from '../assets/vue.svg'
+
+const count = ref(0)
+</script>
+
+<template>
+  <section id="center">
+    <div class="hero">
+      <img :src="heroImg" class="base" width="170" height="179" alt="" />
+      <img :src="vueLogo" class="framework" alt="Vue logo" />
+      <img :src="viteLogo" class="vite" alt="Vite logo" />
+    </div>
+    <div>
+      <h1>Get started</h1>
+      <p>Edit <code>src/App.vue</code> and save to test <code>HMR</code></p>
+    </div>
+    <button type="button" class="counter" @click="count++">
+      Count is {{ count }}
+    </button>
+  </section>
+
+  <div class="ticks"></div>
+
+  <section id="next-steps">
+    <div id="docs">
+      <svg class="icon" role="presentation" aria-hidden="true">
+        <use href="/icons.svg#documentation-icon"></use>
+      </svg>
+      <h2>Documentation</h2>
+      <p>Your questions, answered</p>
+      <ul>
+        <li>
+          <a href="https://vite.dev/" target="_blank">
+            <img class="logo" :src="viteLogo" alt="" />
+            Explore Vite
+          </a>
+        </li>
+        <li>
+          <a href="https://vuejs.org/" target="_blank">
+            <img class="button-icon" :src="vueLogo" alt="" />
+            Learn more
+          </a>
+        </li>
+      </ul>
+    </div>
+    <div id="social">
+      <svg class="icon" role="presentation" aria-hidden="true">
+        <use href="/icons.svg#social-icon"></use>
+      </svg>
+      <h2>Connect with us</h2>
+      <p>Join the Vite community</p>
+      <ul>
+        <li>
+          <a href="https://github.com/vitejs/vite" target="_blank">
+            <svg class="button-icon" role="presentation" aria-hidden="true">
+              <use href="/icons.svg#github-icon"></use>
+            </svg>
+            GitHub
+          </a>
+        </li>
+        <li>
+          <a href="https://chat.vite.dev/" target="_blank">
+            <svg class="button-icon" role="presentation" aria-hidden="true">
+              <use href="/icons.svg#discord-icon"></use>
+            </svg>
+            Discord
+          </a>
+        </li>
+        <li>
+          <a href="https://x.com/vite_js" target="_blank">
+            <svg class="button-icon" role="presentation" aria-hidden="true">
+              <use href="/icons.svg#x-icon"></use>
+            </svg>
+            X.com
+          </a>
+        </li>
+        <li>
+          <a href="https://bsky.app/profile/vite.dev" target="_blank">
+            <svg class="button-icon" role="presentation" aria-hidden="true">
+              <use href="/icons.svg#bluesky-icon"></use>
+            </svg>
+            Bluesky
+          </a>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="ticks"></div>
+  <section id="spacer"></section>
+</template>
+
+
+===== ARQUIVO: frontend\src\router\index.ts =====
+
+import { createRouter, createWebHistory } from 'vue-router'
+import { estaAutenticado } from '@/services/tokenStorage'
+
+const router = createRouter({
+    history: createWebHistory(import.meta.env.BASE_URL),
+    routes: [
+        {
+            path: '/',
+            redirect: '/fichas'
+        },
+        {
+            path: '/login',
+            name: 'login',
+            component: () => import('../views/LoginView.vue'),
+            meta: { publica: true }
+        },
+        {
+            path: '/cadastro',
+            name: 'cadastro',
+            component: () => import('../views/RegisterView.vue'),
+            meta: { publica: true }
+        },
+        {
+            path: '/piscina',
+            name: 'piscina',
+            component: () => import('../views/PiscinaConfigView.vue')
+        },
+        {
+            path: '/fichas',
+            name: 'fichas',
+            component: () => import('../views/FichasView.vue')
+        },
+        {
+            path: '/treino-execucao',
+            name: 'treino-execucao',
+            component: () => import('../views/TreinoExecucaoView.vue')
+        },
+        {
+            path: '/metas',
+            name: 'metas',
+            component: () => import('../views/MetasView.vue')
+        },
+        {
+            path: '/historico',
+            name: 'historico',
+            component: () => import('../views/HistoricoView.vue')
+        }
+    ]
+})
+
+router.beforeEach((to) => {
+    if (to.meta.publica) return true
+
+    if (!estaAutenticado()) {
+        return { name: 'login', query: { redirect: to.fullPath } }
+    }
+
+    return true
+})
+
+export default router
+
+
+===== ARQUIVO: frontend\src\services\api.ts =====
+
+import axios from 'axios'
+import router from '@/router'
+import { obterToken, removerToken } from './tokenStorage'
+
+const api = axios.create({
+    baseURL: import.meta.env.VITE_API_URL,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+
+api.interceptors.request.use((config) => {
+    const token = obterToken()
+
+    if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`
+    }
+
+    return config
+})
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        const naoAutenticado = error.response?.status === 401
+
+        if (naoAutenticado && router.currentRoute.value.name !== 'login') {
+            removerToken()
+            router.push({ name: 'login' })
+        }
+
+        return Promise.reject(error)
+    }
+)
+
+export default api
+
+
+===== ARQUIVO: frontend\src\services\authService.ts =====
+
+import api from './api'
+import { removerToken, salvarToken, estaAutenticado } from './tokenStorage'
+
+export interface CadastroPayload {
+  nome: string
+  email: string
+  senha: string
+}
+
+export interface LoginPayload {
+  email: string
+  senha: string
+}
+
+export interface AuthResponse {
+  token: string
+  nome: string
+  email: string
+  expiraEm: string
+}
+
+const cadastrar = async (dados: CadastroPayload): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>('/auth/registro', dados)
+
+  if (response.data?.token) {
+    salvarToken(response.data.token)
+  }
+
+  return response.data
+}
+
+const login = async (dados: LoginPayload): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>('/auth/login', dados)
+
+  if (response.data?.token) {
+    salvarToken(response.data.token)
+  }
+
+  return response.data
+}
+
+const logout = (): void => removerToken()
+
+export default {
+  cadastrar,
+  login,
+  logout,
+  estaAutenticado
+}
+
+
+===== ARQUIVO: frontend\src\services\erros.ts =====
+
+import axios from 'axios'
+
+export const extrairMensagemErro = (error: unknown, padrao: string): string => {
+    if (axios.isAxiosError(error)) {
+        const dados = error.response?.data as { erro?: string } | undefined
+        return dados?.erro ?? padrao
+    }
+
+    return padrao
+}
+
+
+===== ARQUIVO: frontend\src\services\fichaService.ts =====
+
+import api from './api'
+
+export interface SerieFichaResponse {
+  codSerieFicha: number
+  codFicha: number
+  ordem: number
+  tipoNado: number
+  quantidadeRepeticoes: number
+  distanciaM: number
+  tempoPausaSeg: number
+  isGoalSeries: boolean
+  observacoes?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface FichaBaseResponse {
+  codFicha: number
+  codUsuario: number
+  tituloFicha: string
+  tipoFicha: number
+  status: number
+  fichaCopiada?: number | null
+  createdAt: string
+  updatedAt: string
+  series: SerieFichaResponse[]
+}
+
+export interface FichaBasePayload {
+  tituloFicha: string
+  tipoFicha: number
+}
+
+export interface SerieFichaPayload {
+  ordem?: number
+  tipoNado: number
+  quantidadeRepeticoes: number
+  distanciaM: number
+  tempoPausaSeg: number
+  isGoalSeries?: boolean
+  observacoes?: string
+}
+
+const listar = async (): Promise<FichaBaseResponse[]> => {
+  const response = await api.get<FichaBaseResponse[]>('/fichas-base')
+  return response.data
+}
+
+const obter = async (id: number): Promise<FichaBaseResponse> => {
+  const response = await api.get<FichaBaseResponse>(`/fichas-base/${id}`)
+  return response.data
+}
+
+const criar = async (dados: FichaBasePayload): Promise<FichaBaseResponse> => {
+  const response = await api.post<FichaBaseResponse>('/fichas-base', dados)
+  return response.data
+}
+
+const duplicar = async (id: number): Promise<FichaBaseResponse> => {
+  const response = await api.post<FichaBaseResponse>(`/fichas-base/${id}/duplicar`)
+  return response.data
+}
+
+const excluir = async (id: number): Promise<void> => {
+  await api.delete(`/fichas-base/${id}`)
+}
+
+const adicionarSerie = async (
+  idFicha: number,
+  dados: SerieFichaPayload
+): Promise<SerieFichaResponse> => {
+  const response = await api.post<SerieFichaResponse>(
+    `/fichas-base/${idFicha}/series`,
+    dados
+  )
+  return response.data
+}
+
+const duplicarSerie = async (idSerie: number): Promise<SerieFichaResponse> => {
+  const response = await api.post<SerieFichaResponse>(
+    `/fichas-base/series/${idSerie}/duplicar`
+  )
+  return response.data
+}
+
+const excluirSerie = async (idSerie: number): Promise<void> => {
+  await api.delete(`/fichas-base/series/${idSerie}`)
+}
+
+export default {
+  listar,
+  obter,
+  criar,
+  duplicar,
+  excluir,
+  adicionarSerie,
+  duplicarSerie,
+  excluirSerie
+}
+
+
+===== ARQUIVO: frontend\src\services\formatacao.ts =====
+
+export const TIPOS_NADO = [
+  { title: 'Crawl', value: 0 },
+  { title: 'Costas', value: 1 },
+  { title: 'Borboleta', value: 2 },
+  { title: 'Peito', value: 3 }
+] as const
+
+const NOMES_NADO: Record<number, string> = {
+  0: 'Crawl',
+  1: 'Costas',
+  2: 'Borboleta',
+  3: 'Peito'
+}
+
+export const nomeNado = (tipoNado: number): string =>
+  NOMES_NADO[tipoNado] ?? `Nado ${tipoNado}`
+
+/** Formata segundos como MM:SS (ex.: 75 -> 01:15). */
+export const formatarPace = (segundos: number | null | undefined): string => {
+  if (segundos == null || Number.isNaN(Number(segundos))) return '--'
+
+  const total = Math.max(0, Math.round(Number(segundos)))
+  const minutos = Math.floor(total / 60)
+  const resto = total % 60
+  return `${String(minutos).padStart(2, '0')}:${String(resto).padStart(2, '0')}`
+}
+
+/** Formata duraÃ§Ã£o longa (ex.: 2910 -> 48m 30s). */
+export const formatarDuracao = (segundos: number | null | undefined): string => {
+  if (segundos == null || Number.isNaN(Number(segundos))) return '--'
+
+  const total = Math.max(0, Math.round(Number(segundos)))
+  const minutos = Math.floor(total / 60)
+  const resto = total % 60
+
+  if (minutos === 0) return `${resto}s`
+  if (resto === 0) return `${minutos}m`
+  return `${minutos}m ${resto}s`
+}
+
+export const formatarData = (iso: string | Date): string => {
+  const data = typeof iso === 'string' ? new Date(iso) : iso
+  if (Number.isNaN(data.getTime())) return '--'
+
+  return data.toLocaleDateString('pt-BR')
+}
+
+export const dataLocalISO = (iso: string | Date): string => {
+  const data = typeof iso === 'string' ? new Date(iso) : iso
+  if (Number.isNaN(data.getTime())) return ''
+
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
+
+===== ARQUIVO: frontend\src\services\historicoService.ts =====
+
+import api from './api'
+import type { TreinoResponse } from './treinoService'
+
+const listar = async (): Promise<TreinoResponse[]> => {
+  const response = await api.get<TreinoResponse[]>('/historico/treinos', {
+    params: { pagina: 1, tamanhoPagina: 200 }
+  })
+  return response.data
+}
+
+const obter = async (id: number): Promise<TreinoResponse> => {
+  const response = await api.get<TreinoResponse>(`/historico/treinos/${id}`)
+  return response.data
+}
+
+export default {
+  listar,
+  obter
+}
+
+
+===== ARQUIVO: frontend\src\services\metaService.ts =====
+
+import api from './api'
+
+export interface MetaResponse {
+  codMeta: number
+  codUsuario: number
+  codSerieFicha: number
+  tituloMeta: string
+  tipoNado: number
+  distanciaAlvoM: number
+  tempoAlvoSeg: number
+  paceAlvoSeg: number
+  modoAvaliacao: number
+  status: number
+  dataInicio: string
+  dataFimPrevista?: string | null
+  observacoes?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MetaPayload {
+  codSerieFicha: number
+  tituloMeta: string
+  tipoNado: number
+  distanciaAlvoM: number
+  tempoAlvoSeg: number
+  modoAvaliacao: number
+  dataInicio?: string
+  dataFimPrevista?: string | null
+  observacoes?: string
+}
+
+export interface ProgressoMetaResponse {
+  codMeta: number
+  tituloMeta: string
+  distanciaAlvoM: number
+  tempoAlvoSeg: number
+  paceAlvoSeg: number
+  melhorTempoRealizadoSeg?: number | null
+  melhorPaceRealizadoSeg?: number | null
+  percentualAtingimento: number
+  status?: number
+  historicoTentativas?: Array<{
+    data: string
+    tituloTreino: string
+    tipoNado: number
+    distanciaM: number
+    paceSeg: number
+  }>
+}
+
+const listar = async (status?: number | null): Promise<MetaResponse[]> => {
+  const response = await api.get<MetaResponse[]>('/metas', {
+    params: status === null || status === undefined ? undefined : { status }
+  })
+  return response.data
+}
+
+const criar = async (dados: MetaPayload): Promise<MetaResponse> => {
+  const response = await api.post<MetaResponse>('/metas', dados)
+  return response.data
+}
+
+const obterProgresso = async (id: number): Promise<ProgressoMetaResponse> => {
+  const response = await api.get<ProgressoMetaResponse>(`/metas/${id}/progresso`)
+  return response.data
+}
+
+const alterarStatus = async (id: number, status: number): Promise<MetaResponse> => {
+  const response = await api.put<MetaResponse>(`/metas/${id}/status`, null, {
+    params: { status }
+  })
+  return response.data
+}
+
+const excluir = async (id: number): Promise<void> => {
+  await api.delete(`/metas/${id}`)
+}
+
+export default {
+  listar,
+  criar,
+  obterProgresso,
+  alterarStatus,
+  excluir
+}
+
+
+===== ARQUIVO: frontend\src\services\piscinaService.ts =====
+
+import axios from 'axios'
+import api from './api'
+
+export interface ConfigPiscinaPayload {
+    tamanhoM: number
+    formaContagem: number
+}
+
+export interface ConfigPiscinaResponse {
+    codPiscina: number
+    codUsuario: number
+    tamanhoM: number
+    formaContagem: number
+    status: number
+    createdAt: string
+    updatedAt: string
+}
+
+const criarConfiguracao = async (dados: ConfigPiscinaPayload): Promise<ConfigPiscinaResponse> => {
+    const response = await api.post<ConfigPiscinaResponse>('/piscina-configuracao', dados)
+    return response.data
+}
+
+const atualizarConfiguracao = async (dados: ConfigPiscinaPayload): Promise<ConfigPiscinaResponse> => {
+    const response = await api.put<ConfigPiscinaResponse>('/piscina-configuracao/me', dados)
+    return response.data
+}
+
+// Retorna null quando o atleta ainda nao possui configuracao cadastrada.
+const obterConfiguracao = async (): Promise<ConfigPiscinaResponse | null> => {
+    try {
+        const response = await api.get<ConfigPiscinaResponse>('/piscina-configuracao/me')
+        return response.data
+    } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+            return null
+        }
+
+        throw error
+    }
+}
+
+export default {
+    criarConfiguracao,
+    atualizarConfiguracao,
+    obterConfiguracao
+}
+
+
+===== ARQUIVO: frontend\src\services\tokenStorage.ts =====
+
+import { computed, ref } from 'vue'
+
+const CHAVE_TOKEN = 'user_token'
+
+const token = ref<string | null>(localStorage.getItem(CHAVE_TOKEN))
+
+export const autenticado = computed(() => !!token.value)
+
+export const obterToken = (): string | null => token.value
+
+export const estaAutenticado = (): boolean => !!token.value
+
+export const salvarToken = (novoToken: string): void => {
+    token.value = novoToken
+    localStorage.setItem(CHAVE_TOKEN, novoToken)
+}
+
+export const removerToken = (): void => {
+    token.value = null
+    localStorage.removeItem(CHAVE_TOKEN)
+}
+
+
+===== ARQUIVO: frontend\src\services\treinoService.ts =====
+
+import api from './api'
+
+export interface SerieTreinoResponse {
+  codSerieTreino: number
+  codTreino: number
+  codSerieFicha?: number | null
+  codMeta?: number | null
+  ordem: number
+  tipoNado: number
+  quantidadeRepeticoesPlanejada: number
+  distanciaPlanejadaM: number
+  tempoPausaSeg: number
+  tempoTotalSeg?: number | null
+  distanciaTotalM?: number | null
+  paceMedioSeg?: number | null
+  observacoes?: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TreinoResponse {
+  codTreino: number
+  codUsuario: number
+  codFicha: number
+  tituloTreino: string
+  observacao?: string | null
+  distanciaTotalM: number
+  duracaoTotalSeg: number
+  paceMedioSeg?: number | null
+  tamanhoPiscinaM: number
+  dataTreino: string
+  status: number
+  createdAt: string
+  updatedAt: string
+  seriesTreino: SerieTreinoResponse[]
+}
+
+export interface IniciarTreinoPayload {
+  codFicha: number
+  tituloTreino?: string
+  observacao?: string
+  tamanhoPiscinaM: number
+}
+
+export interface SerieTreinoPayload {
+  codSerieFicha?: number | null
+  codMeta?: number | null
+  ordem: number
+  tipoNado: number
+  quantidadeRepeticoesPlanejada: number
+  distanciaPlanejadaM: number
+  tempoPausaSeg: number
+  tempoTotalSeg?: number | null
+  distanciaTotalM?: number | null
+  observacoes?: string | null
+}
+
+export interface RepeticaoPayload {
+  numeroRepeticao: number
+  distanciaRealM: number
+  duracaoSeg: number
+}
+
+export interface RepeticaoResponse {
+  codRepeticaoSerieTreino: number
+  codSerieTreino: number
+  numeroRepeticao: number
+  distanciaRealM: number
+  duracaoSeg: number
+  paceSeg?: number | null
+  createdAt: string
+}
+
+const iniciar = async (dados: IniciarTreinoPayload): Promise<TreinoResponse> => {
+  const response = await api.post<TreinoResponse>('/treinos', dados)
+  return response.data
+}
+
+const listar = async (status?: number): Promise<TreinoResponse[]> => {
+  const response = await api.get<TreinoResponse[]>('/treinos', {
+    params: { status, pagina: 1, tamanhoPagina: 50 }
+  })
+  return response.data
+}
+
+const obter = async (id: number): Promise<TreinoResponse> => {
+  const response = await api.get<TreinoResponse>(`/treinos/${id}`)
+  return response.data
+}
+
+const atualizar = async (
+  id: number,
+  dados: { tituloTreino: string; observacao?: string; tamanhoPiscinaM: number }
+): Promise<TreinoResponse> => {
+  const response = await api.put<TreinoResponse>(`/treinos/${id}`, dados)
+  return response.data
+}
+
+const finalizar = async (id: number): Promise<TreinoResponse> => {
+  const response = await api.put<TreinoResponse>(`/treinos/${id}/finalizar`)
+  return response.data
+}
+
+const cancelar = async (id: number): Promise<TreinoResponse> => {
+  const response = await api.put<TreinoResponse>(`/treinos/${id}/cancelar`)
+  return response.data
+}
+
+const atualizarSerie = async (
+  idTreino: number,
+  idSerie: number,
+  dados: SerieTreinoPayload
+): Promise<SerieTreinoResponse> => {
+  const response = await api.put<SerieTreinoResponse>(
+    `/treinos/${idTreino}/series/${idSerie}`,
+    dados
+  )
+  return response.data
+}
+
+const listarRepeticoes = async (
+  idTreino: number,
+  idSerie: number
+): Promise<RepeticaoResponse[]> => {
+  const response = await api.get<RepeticaoResponse[]>(
+    `/treinos/${idTreino}/series/${idSerie}/repeticoes`
+  )
+  return response.data
+}
+
+const registrarRepeticao = async (
+  idTreino: number,
+  idSerie: number,
+  dados: RepeticaoPayload
+): Promise<RepeticaoResponse> => {
+  const response = await api.post<RepeticaoResponse>(
+    `/treinos/${idTreino}/series/${idSerie}/repeticoes`,
+    dados
+  )
+  return response.data
+}
+
+const atualizarRepeticao = async (
+  idTreino: number,
+  idSerie: number,
+  idRepeticao: number,
+  dados: RepeticaoPayload
+): Promise<RepeticaoResponse> => {
+  const response = await api.put<RepeticaoResponse>(
+    `/treinos/${idTreino}/series/${idSerie}/repeticoes/${idRepeticao}`,
+    dados
+  )
+  return response.data
+}
+
+export default {
+  iniciar,
+  listar,
+  obter,
+  atualizar,
+  finalizar,
+  cancelar,
+  atualizarSerie,
+  listarRepeticoes,
+  registrarRepeticao,
+  atualizarRepeticao
+}
+
+
+===== ARQUIVO: frontend\src\views\FichasView.vue =====
+
+<template>
+  <v-container>
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-6 ga-4">
+      <div>
+        <h1 class="text-h5 font-weight-bold text-primary mb-1">
+          <v-icon icon="mdi-clipboard-text-outline" class="mr-2"></v-icon>Fichas de Treino Base
+        </h1>
+        <p class="text-body-2 text-medium-emphasis">
+          Crie seus gabaritos de treino reutilizaveis.
+        </p>
+      </div>
+
+      <div class="d-flex align-center ga-3">
+        <v-chip color="info" variant="tonal" size="large">
+          <v-icon start icon="mdi-counter"></v-icon>
+          Fichas: {{ fichas.length }} / 5 Ativas
+        </v-chip>
+
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-plus"
+          size="large"
+          :disabled="fichas.length >= 5 || carregando"
+          @click="abrirNovaFicha"
+        >
+          Nova Ficha
+        </v-btn>
+      </div>
+    </div>
+
+    <v-alert v-if="mensagem" :type="mensagem.tipo" variant="tonal" class="mb-4" density="compact">
+      {{ mensagem.texto }}
+    </v-alert>
+
+    <div v-if="carregando" class="text-center py-12">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </div>
+
+    <v-alert
+      v-else-if="fichas.length === 0"
+      type="info"
+      variant="tonal"
+      class="mb-4"
+    >
+      Nenhuma ficha ativa ainda. Crie a primeira para montar seus treinos.
+    </v-alert>
+
+    <v-row v-else>
+      <v-col v-for="ficha in fichas" :key="ficha.codFicha" cols="12" md="6">
+        <v-card class="elevation-2 rounded-lg fill-height d-flex flex-column">
+          <v-card-item class="bg-surface">
+            <template v-slot:prepend>
+              <v-icon icon="mdi-swim" color="primary" class="mr-2"></v-icon>
+            </template>
+            <v-card-title class="font-weight-bold">{{ ficha.tituloFicha }}</v-card-title>
+            <v-card-subtitle>{{ seriesDaFicha(ficha).length }} series cadastradas</v-card-subtitle>
+
+            <template v-slot:append>
+              <v-btn
+                icon="mdi-content-copy"
+                variant="text"
+                density="comfortable"
+                color="info"
+                title="Duplicar Ficha"
+                :disabled="fichas.length >= 5"
+                @click="duplicarFicha(ficha.codFicha)"
+              ></v-btn>
+              <v-btn
+                icon="mdi-delete-outline"
+                variant="text"
+                density="comfortable"
+                color="error"
+                title="Excluir Ficha"
+                @click="excluirFicha(ficha.codFicha)"
+              ></v-btn>
+            </template>
+          </v-card-item>
+
+          <v-divider></v-divider>
+
+          <v-card-text class="flex-grow-1">
+            <v-list density="compact" class="bg-transparent">
+              <v-list-item
+                v-for="serie in seriesDaFicha(ficha)"
+                :key="serie.codSerieFicha"
+                class="px-0"
+              >
+                <template v-slot:prepend>
+                  <v-avatar color="primary" size="28" class="text-caption font-weight-bold mr-3">
+                    {{ serie.ordem }}
+                  </v-avatar>
+                </template>
+
+                <v-list-item-title class="font-weight-medium">
+                  {{ serie.quantidadeRepeticoes }}x {{ serie.distanciaM }}m - {{ nomeNado(serie.tipoNado) }}
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  Pausa: {{ serie.tempoPausaSeg }}s | {{ serie.observacoes || 'Sem observacoes' }}
+                </v-list-item-subtitle>
+
+                <template v-slot:append>
+                  <v-btn
+                    icon="mdi-content-copy"
+                    variant="text"
+                    density="compact"
+                    color="info"
+                    title="Duplicar serie"
+                    @click="duplicarSerie(serie.codSerieFicha)"
+                  ></v-btn>
+                  <v-btn
+                    icon="mdi-delete-outline"
+                    variant="text"
+                    density="compact"
+                    color="error"
+                    title="Remover serie"
+                    @click="excluirSerie(serie.codSerieFicha)"
+                  ></v-btn>
+                </template>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+
+          <v-divider></v-divider>
+
+          <v-card-actions class="pa-4 bg-surface">
+            <v-btn
+              color="primary"
+              variant="tonal"
+              block
+              prepend-icon="mdi-plus-circle-outline"
+              @click="abrirAdicionarSerie(ficha)"
+            >
+              Adicionar Serie
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-dialog v-model="dialogNovaFicha" max-width="500">
+      <v-card class="pa-4 rounded-lg">
+        <v-card-title class="font-weight-bold text-primary">Criar Nova Ficha Base</v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="novaFichaTitulo"
+            label="Titulo da Ficha (Ex: Treino de Velocidade 1500m)"
+            variant="outlined"
+            density="comfortable"
+            class="mt-2"
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn variant="text" @click="dialogNovaFicha = false">Cancelar</v-btn>
+          <v-btn color="primary" :loading="salvando" @click="salvarNovaFicha">Criar Ficha</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="dialogNovaSerie" max-width="500">
+      <v-card class="pa-4 rounded-lg">
+        <v-card-title class="font-weight-bold text-primary">Adicionar Serie ao Treino</v-card-title>
+        <v-card-text>
+          <v-select
+            v-model="novaSerie.tipoNado"
+            label="Tipo de Nado"
+            :items="TIPOS_NADO"
+            item-title="title"
+            item-value="value"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3 mt-2"
+          ></v-select>
+
+          <v-row>
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="novaSerie.quantidadeRepeticoes"
+                label="Quantidade Repeticoes"
+                type="number"
+                variant="outlined"
+                density="comfortable"
+              ></v-text-field>
+            </v-col>
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="novaSerie.distanciaM"
+                label="Distancia (Metros)"
+                type="number"
+                variant="outlined"
+                density="comfortable"
+              ></v-text-field>
+            </v-col>
+          </v-row>
+
+          <v-text-field
+            v-model.number="novaSerie.tempoPausaSeg"
+            label="Tempo de Pausa (Segundos)"
+            type="number"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+          ></v-text-field>
+
+          <v-text-field
+            v-model="novaSerie.observacoes"
+            label="Observacoes (Opcional)"
+            variant="outlined"
+            density="comfortable"
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn variant="text" @click="dialogNovaSerie = false">Cancelar</v-btn>
+          <v-btn color="primary" :loading="salvando" @click="salvarNovaSerie">Adicionar Serie</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-container>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import fichaService, {
+  type FichaBaseResponse,
+  type SerieFichaPayload
+} from '@/services/fichaService'
+import { extrairMensagemErro } from '@/services/erros'
+import { TIPOS_NADO, nomeNado } from '@/services/formatacao'
+
+const fichas = ref<FichaBaseResponse[]>([])
+const carregando = ref(false)
+const salvando = ref(false)
+const mensagem = ref<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null)
+
+const dialogNovaFicha = ref(false)
+const novaFichaTitulo = ref('')
+
+const dialogNovaSerie = ref(false)
+const fichaSelecionadaId = ref<number | null>(null)
+const novaSerie = ref({
+  tipoNado: 0,
+  quantidadeRepeticoes: 4,
+  distanciaM: 100,
+  tempoPausaSeg: 20,
+  observacoes: ''
+})
+
+const seriesDaFicha = (ficha: FichaBaseResponse) =>
+  [...(ficha.series ?? [])].sort((a, b) => a.ordem - b.ordem)
+
+const carregarFichas = async (silencioso = false) => {
+  if (!silencioso) {
+    carregando.value = true
+    mensagem.value = null
+  }
+
+  try {
+    fichas.value = await fichaService.listar()
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel carregar as fichas.')
+    }
+  } finally {
+    if (!silencioso) carregando.value = false
+  }
+}
+
+const abrirNovaFicha = () => {
+  novaFichaTitulo.value = ''
+  dialogNovaFicha.value = true
+}
+
+const salvarNovaFicha = async () => {
+  if (!novaFichaTitulo.value.trim()) return
+
+  salvando.value = true
+  mensagem.value = null
+
+  try {
+    await fichaService.criar({
+      tituloFicha: novaFichaTitulo.value.trim(),
+      tipoFicha: 0
+    })
+    dialogNovaFicha.value = false
+    await carregarFichas()
+    mensagem.value = { tipo: 'success', texto: 'Ficha criada com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel criar a ficha.')
+    }
+  } finally {
+    salvando.value = false
+  }
+}
+
+const duplicarFicha = async (id: number) => {
+  mensagem.value = null
+
+  try {
+    await fichaService.duplicar(id)
+    await carregarFichas()
+    mensagem.value = { tipo: 'success', texto: 'Ficha duplicada com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel duplicar a ficha.')
+    }
+  }
+}
+
+const excluirFicha = async (id: number) => {
+  if (!confirm('Deseja excluir esta ficha?')) return
+
+  mensagem.value = null
+
+  try {
+    await fichaService.excluir(id)
+    await carregarFichas()
+    mensagem.value = { tipo: 'success', texto: 'Ficha excluida com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel excluir a ficha.')
+    }
+  }
+}
+
+const abrirAdicionarSerie = (ficha: FichaBaseResponse) => {
+  fichaSelecionadaId.value = ficha.codFicha
+  novaSerie.value = {
+    tipoNado: 0,
+    quantidadeRepeticoes: 4,
+    distanciaM: 100,
+    tempoPausaSeg: 20,
+    observacoes: ''
+  }
+  dialogNovaSerie.value = true
+}
+
+const salvarNovaSerie = async () => {
+  if (fichaSelecionadaId.value == null) return
+
+  const payload: SerieFichaPayload = {
+    tipoNado: novaSerie.value.tipoNado,
+    quantidadeRepeticoes: novaSerie.value.quantidadeRepeticoes,
+    distanciaM: novaSerie.value.distanciaM,
+    tempoPausaSeg: novaSerie.value.tempoPausaSeg,
+    isGoalSeries: false,
+    observacoes: novaSerie.value.observacoes || undefined
+  }
+
+  salvando.value = true
+  mensagem.value = null
+
+  try {
+    await fichaService.adicionarSerie(fichaSelecionadaId.value, payload)
+    dialogNovaSerie.value = false
+    await carregarFichas(true)
+    mensagem.value = { tipo: 'success', texto: 'Serie adicionada com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel adicionar a serie.')
+    }
+  } finally {
+    salvando.value = false
+  }
+}
+
+const duplicarSerie = async (idSerie: number) => {
+  mensagem.value = null
+
+  try {
+    await fichaService.duplicarSerie(idSerie)
+    await carregarFichas(true)
+    mensagem.value = { tipo: 'success', texto: 'Serie duplicada com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel duplicar a serie.')
+    }
+  }
+}
+
+const excluirSerie = async (idSerie: number) => {
+  if (!confirm('Deseja remover esta serie?')) return
+
+  mensagem.value = null
+
+  try {
+    await fichaService.excluirSerie(idSerie)
+    await carregarFichas(true)
+    mensagem.value = { tipo: 'success', texto: 'Serie removida com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel remover a serie.')
+    }
+  }
+}
+
+onMounted(carregarFichas)
+</script>
+
+
+===== ARQUIVO: frontend\src\views\HistoricoView.vue =====
+
+<template>
+  <v-container>
+    <div class="mb-6">
+      <h1 class="text-h5 font-weight-bold text-primary mb-1">
+        <v-icon icon="mdi-history" class="mr-2"></v-icon>Historico de Treinos
+      </h1>
+      <p class="text-body-2 text-medium-emphasis">
+        Consulte todas as suas sessoes de natacao concluidas e seus tempos acumulados.
+      </p>
+    </div>
+
+    <v-alert v-if="mensagem" :type="mensagem.tipo" variant="tonal" class="mb-4" density="compact">
+      {{ mensagem.texto }}
+    </v-alert>
+
+    <div v-if="carregando" class="text-center py-12">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </div>
+
+    <v-alert
+      v-else-if="historicoTreinos.length === 0"
+      type="info"
+      variant="tonal"
+    >
+      Nenhum treino concluido ainda. Finalize um treino na tela de Execucao.
+    </v-alert>
+
+    <template v-else>
+      <v-row class="mb-4">
+        <v-col cols="12" md="6">
+          <v-text-field
+            v-model="filtroTitulo"
+            label="Filtrar por titulo"
+            placeholder="Ex: regenerativo"
+            prepend-inner-icon="mdi-magnify"
+            variant="outlined"
+            density="comfortable"
+            clearable
+            hide-details
+          ></v-text-field>
+        </v-col>
+        <v-col cols="12" md="6">
+          <v-text-field
+            v-model="filtroData"
+            label="Filtrar por data"
+            type="date"
+            prepend-inner-icon="mdi-calendar"
+            variant="outlined"
+            density="comfortable"
+            clearable
+            hide-details
+          ></v-text-field>
+        </v-col>
+      </v-row>
+
+      <v-alert
+        v-if="historicoFiltrado.length === 0"
+        type="info"
+        variant="tonal"
+      >
+        Nenhum treino encontrado para esses filtros.
+      </v-alert>
+
+      <v-card v-else class="rounded-lg elevation-2">
+        <v-table hover>
+          <thead>
+            <tr>
+              <th class="text-left font-weight-bold">Data</th>
+              <th class="text-left font-weight-bold">Treino</th>
+              <th class="text-center font-weight-bold">Distancia Total</th>
+              <th class="text-center font-weight-bold">Tempo Total</th>
+              <th class="text-center font-weight-bold">Pace Medio</th>
+              <th class="text-right font-weight-bold">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in historicoFiltrado" :key="item.codTreino">
+              <td class="text-body-2 font-weight-medium">{{ formatarData(item.dataTreino) }}</td>
+              <td>
+                <div class="font-weight-bold text-primary">{{ item.tituloTreino }}</div>
+                <div v-if="item.observacao" class="text-caption text-medium-emphasis">
+                  {{ item.observacao }}
+                </div>
+              </td>
+              <td class="text-center">
+                <v-chip size="small" color="info" variant="tonal">
+                  {{ item.distanciaTotalM }}m
+                </v-chip>
+              </td>
+              <td class="text-center font-weight-medium">
+                {{ formatarDuracao(item.duracaoTotalSeg) }}
+              </td>
+              <td class="text-center">
+                <v-chip size="small" color="primary" variant="tonal">
+                  {{ formatarPace(item.paceMedioSeg) }} /100m
+                </v-chip>
+              </td>
+              <td class="text-right">
+                <v-btn
+                  icon="mdi-eye-outline"
+                  variant="text"
+                  color="primary"
+                  density="comfortable"
+                  :loading="carregandoDetalhe === item.codTreino"
+                  @click="abrirDetalhes(item.codTreino)"
+                ></v-btn>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-card>
+    </template>
+
+    <v-dialog v-model="dialogDetalhes" max-width="600">
+      <v-card v-if="treinoSelecionado" class="pa-6 rounded-lg">
+        <v-card-title class="font-weight-bold text-primary px-0">
+          {{ treinoSelecionado.tituloTreino }}
+        </v-card-title>
+        <v-card-subtitle class="px-0 mb-4">
+          Realizado em {{ formatarData(treinoSelecionado.dataTreino) }}
+        </v-card-subtitle>
+
+        <v-alert
+          v-if="treinoSelecionado.observacao"
+          type="info"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ treinoSelecionado.observacao }}
+        </v-alert>
+
+        <v-divider class="mb-4"></v-divider>
+
+        <v-card-text class="px-0">
+          <h3 class="text-subtitle-2 font-weight-bold mb-3 text-medium-emphasis">
+            Series Executadas
+          </h3>
+          <v-list density="compact" class="bg-surface rounded-lg">
+            <v-list-item
+              v-for="(s, idx) in treinoSelecionado.seriesTreino"
+              :key="s.codSerieTreino"
+            >
+              <template v-slot:prepend>
+                <v-avatar color="primary" size="24" class="text-caption mr-2">
+                  {{ Number(idx) + 1 }}
+                </v-avatar>
+              </template>
+              <v-list-item-title class="font-weight-bold">
+                {{ s.quantidadeRepeticoesPlanejada }}x {{ s.distanciaPlanejadaM }}m
+                {{ nomeNado(s.tipoNado) }}
+              </v-list-item-title>
+              <v-list-item-subtitle>
+                Tempo acumulado: {{ formatarDuracao(s.tempoTotalSeg) }}
+              </v-list-item-subtitle>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+
+        <v-card-actions class="justify-end px-0 mt-4">
+          <v-btn color="primary" variant="tonal" @click="dialogDetalhes = false">Fechar</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-container>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import historicoService from '@/services/historicoService'
+import type { TreinoResponse } from '@/services/treinoService'
+import { extrairMensagemErro } from '@/services/erros'
+import { dataLocalISO, formatarData, formatarDuracao, formatarPace, nomeNado } from '@/services/formatacao'
+
+const dialogDetalhes = ref(false)
+const treinoSelecionado = ref<TreinoResponse | null>(null)
+const historicoTreinos = ref<TreinoResponse[]>([])
+const filtroTitulo = ref('')
+const filtroData = ref('')
+const carregando = ref(false)
+const carregandoDetalhe = ref<number | null>(null)
+const mensagem = ref<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null)
+
+const historicoFiltrado = computed(() => {
+  const titulo = filtroTitulo.value.trim().toLowerCase()
+  const data = filtroData.value
+
+  return historicoTreinos.value.filter((item) => {
+    const bateTitulo = !titulo || item.tituloTreino.toLowerCase().includes(titulo)
+    const bateData = !data || dataLocalISO(item.dataTreino) === data
+    return bateTitulo && bateData
+  })
+})
+
+const carregarHistorico = async () => {
+  carregando.value = true
+  mensagem.value = null
+
+  try {
+    historicoTreinos.value = await historicoService.listar()
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel carregar o historico.')
+    }
+  } finally {
+    carregando.value = false
+  }
+}
+
+const abrirDetalhes = async (codTreino: number) => {
+  carregandoDetalhe.value = codTreino
+  mensagem.value = null
+
+  try {
+    treinoSelecionado.value = await historicoService.obter(codTreino)
+    dialogDetalhes.value = true
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel abrir o detalhe do treino.')
+    }
+  } finally {
+    carregandoDetalhe.value = null
+  }
+}
+
+onMounted(carregarHistorico)
+</script>
+
+
+===== ARQUIVO: frontend\src\views\LoginView.vue =====
+
+<template>
+  <v-container class="fill-height justify-center">
+    <v-responsive max-width="480">
+      <v-card class="pa-6 pa-md-8 elevation-4 rounded-lg">
+        <div class="text-center mb-6">
+          <v-icon icon="mdi-login-variant" size="48" color="primary" class="mb-2"></v-icon>
+          <h1 class="text-h5 font-weight-bold text-primary">Entrar no toSwim</h1>
+          <p class="text-body-2 text-medium-emphasis">Acesse sua conta para continuar seus treinos</p>
+        </div>
+
+        <v-alert
+          v-if="mensagemErro"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ mensagemErro }}
+        </v-alert>
+
+        <v-form v-model="formValido" @submit.prevent="entrar">
+          <v-text-field
+            v-model="email"
+            label="E-mail"
+            prepend-inner-icon="mdi-email-outline"
+            type="email"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+            :rules="[
+              v => !!v || 'E-mail Ã© obrigatÃ³rio',
+              v => /.+@.+\..+/.test(v) || 'E-mail deve ser vÃ¡lido'
+            ]"
+            required
+          ></v-text-field>
+
+          <v-text-field
+            v-model="senha"
+            label="Senha"
+            prepend-inner-icon="mdi-lock-outline"
+            :type="exibirSenha ? 'text' : 'password'"
+            :append-inner-icon="exibirSenha ? 'mdi-eye-off' : 'mdi-eye'"
+            @click:append-inner="exibirSenha = !exibirSenha"
+            variant="outlined"
+            density="comfortable"
+            class="mb-4"
+            :rules="[v => !!v || 'Senha Ã© obrigatÃ³ria']"
+            required
+          ></v-text-field>
+
+          <v-btn
+            type="submit"
+            color="primary"
+            block
+            size="large"
+            elevation="2"
+            :disabled="!formValido"
+            :loading="carregando"
+          >
+            Entrar
+          </v-btn>
+        </v-form>
+
+        <div class="text-center mt-6">
+          <span class="text-body-2 text-medium-emphasis">Ainda nÃ£o tem conta?</span>
+          <v-btn variant="text" color="primary" density="comfortable" to="/cadastro">
+            Criar conta
+          </v-btn>
+        </div>
+      </v-card>
+    </v-responsive>
+  </v-container>
+</template>
+
+<script setup lang="ts">
+    import { ref } from 'vue'
+    import { useRoute, useRouter } from 'vue-router'
+    import authService from '@/services/authService'
+    import { extrairMensagemErro } from '@/services/erros'
+
+    const router = useRouter()
+    const route = useRoute()
+
+    const formValido = ref(false)
+    const email = ref('')
+    const senha = ref('')
+    const exibirSenha = ref(false)
+    const carregando = ref(false)
+    const mensagemErro = ref('')
+
+    const entrar = async () => {
+        if (!formValido.value) return
+
+        carregando.value = true
+        mensagemErro.value = ''
+
+        try {
+            await authService.login({
+                email: email.value,
+                senha: senha.value
+            })
+
+            const destino = typeof route.query.redirect === 'string' ? route.query.redirect : '/fichas'
+            router.push(destino)
+        } catch (error) {
+            mensagemErro.value = extrairMensagemErro(error, 'E-mail ou senha invÃ¡lidos.')
+        } finally {
+            carregando.value = false
+        }
+    }
+</script>
+
+
+===== ARQUIVO: frontend\src\views\MetasView.vue =====
+
+<template>
+  <v-container>
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center mb-6 ga-4">
+      <div>
+        <h1 class="text-h5 font-weight-bold text-primary mb-1">
+          <v-icon icon="mdi-target" class="mr-2"></v-icon>Metas de Tempo
+        </h1>
+        <p class="text-body-2 text-medium-emphasis">
+          Acompanhe e desafie seus limites com metas por distancia e ritmo.
+        </p>
+      </div>
+
+      <v-btn
+        color="primary"
+        prepend-icon="mdi-plus"
+        size="large"
+        :disabled="opcoesSeries.length === 0"
+        @click="abrirNovaMeta"
+      >
+        Nova Meta
+      </v-btn>
+    </div>
+
+    <v-alert v-if="mensagem" :type="mensagem.tipo" variant="tonal" class="mb-4" density="compact">
+      {{ mensagem.texto }}
+    </v-alert>
+
+    <v-tabs v-model="filtroStatus" color="primary" class="mb-6">
+      <v-tab :value="null">Todas</v-tab>
+      <v-tab :value="0">Ativas</v-tab>
+      <v-tab :value="1">Concluidas</v-tab>
+    </v-tabs>
+
+    <div v-if="carregando" class="text-center py-12">
+      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+    </div>
+
+    <v-alert
+      v-else-if="metasFiltradas.length === 0"
+      type="info"
+      variant="tonal"
+    >
+      Nenhuma meta encontrada para este filtro.
+    </v-alert>
+
+    <v-row v-else>
+      <v-col v-for="meta in metasFiltradas" :key="meta.codMeta" cols="12" md="6">
+        <v-card class="pa-6 rounded-lg elevation-2">
+          <div class="d-flex justify-space-between align-start mb-3">
+            <div>
+              <v-chip
+                :color="meta.status === 1 ? 'success' : meta.status === 2 ? 'error' : 'primary'"
+                size="small"
+                class="mb-2"
+              >
+                {{ rotuloStatus(meta.status) }}
+              </v-chip>
+              <h2 class="text-h6 font-weight-bold">{{ meta.tituloMeta }}</h2>
+            </div>
+            <v-chip variant="outlined" color="info">
+              {{ nomeNado(meta.tipoNado) }} - {{ meta.distanciaAlvoM }}m
+            </v-chip>
+          </div>
+
+          <v-divider class="my-4"></v-divider>
+
+          <v-row density="compact" class="text-center my-2">
+            <v-col cols="4">
+              <div class="text-caption text-medium-emphasis">Tempo Alvo</div>
+              <div class="text-subtitle-1 font-weight-bold text-primary">
+                {{ formatarPace(meta.tempoAlvoSeg) }}
+              </div>
+            </v-col>
+
+            <v-col cols="4">
+              <div class="text-caption text-medium-emphasis">Pace Alvo</div>
+              <div class="text-subtitle-1 font-weight-bold text-info">
+                {{ formatarPace(meta.paceAlvoSeg) }} /100m
+              </div>
+            </v-col>
+
+            <v-col cols="4">
+              <div class="text-caption text-medium-emphasis">Melhor Pace</div>
+              <div class="text-subtitle-1 font-weight-bold">
+                {{ formatarPace(meta.melhorPace) }}
+              </div>
+            </v-col>
+          </v-row>
+
+          <div class="mt-4">
+            <div class="d-flex justify-space-between text-caption mb-1">
+              <span>Progresso ate a meta</span>
+              <span class="font-weight-bold">{{ meta.progresso }}%</span>
+            </div>
+            <v-progress-linear
+              :model-value="meta.progresso"
+              color="primary"
+              height="8"
+              rounded
+            ></v-progress-linear>
+            <div class="text-caption text-medium-emphasis mt-2">
+              {{
+                meta.tentativas > 0
+                  ? `${meta.tentativas} tentativa(s) no historico de treinos`
+                  : 'Nenhum treino compativel no historico ainda'
+              }}
+              <span v-if="meta.progresso >= 100 && meta.status === 1">
+                · Meta atingida e concluida automaticamente
+              </span>
+            </div>
+          </div>
+
+          <div v-if="meta.status === 0" class="d-flex justify-end ga-2 mt-4">
+            <v-btn
+              size="small"
+              variant="tonal"
+              color="success"
+              @click="marcarConcluida(meta.codMeta)"
+            >
+              Concluir
+            </v-btn>
+            <v-btn
+              size="small"
+              variant="text"
+              color="error"
+              @click="excluirMeta(meta.codMeta)"
+            >
+              Excluir
+            </v-btn>
+          </div>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <v-dialog v-model="dialogNovaMeta" max-width="560">
+      <v-card class="pa-4 rounded-lg">
+        <v-card-title class="font-weight-bold text-primary">Criar Meta de Tempo</v-card-title>
+        <v-card-text>
+          <v-select
+            v-model="novaMeta.codSerieFicha"
+            label="Serie da Ficha"
+            :items="opcoesSeries"
+            item-title="label"
+            item-value="codSerieFicha"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3 mt-2"
+            @update:model-value="aoSelecionarSerie"
+          ></v-select>
+
+          <v-text-field
+            v-model="novaMeta.tituloMeta"
+            label="Titulo da Meta"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+          ></v-text-field>
+
+          <v-select
+            v-model="novaMeta.tipoNado"
+            label="Tipo de Nado"
+            :items="TIPOS_NADO"
+            item-title="title"
+            item-value="value"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+          ></v-select>
+
+          <v-row>
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="novaMeta.distanciaAlvoM"
+                label="Distancia (Metros)"
+                type="number"
+                variant="outlined"
+                density="comfortable"
+              ></v-text-field>
+            </v-col>
+
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="novaMeta.tempoAlvoSeg"
+                label="Tempo Alvo (Segundos)"
+                type="number"
+                variant="outlined"
+                density="comfortable"
+              ></v-text-field>
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn variant="text" @click="dialogNovaMeta = false">Cancelar</v-btn>
+          <v-btn color="primary" :loading="salvando" @click="salvarMeta">Criar Meta</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-container>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import fichaService from '@/services/fichaService'
+import metaService, { type MetaResponse } from '@/services/metaService'
+import { extrairMensagemErro } from '@/services/erros'
+import { TIPOS_NADO, formatarPace, nomeNado } from '@/services/formatacao'
+
+interface MetaExibicao extends MetaResponse {
+  progresso: number
+  melhorPace?: number | null
+  tentativas: number
+}
+
+interface OpcaoSerie {
+  codSerieFicha: number
+  label: string
+  tipoNado: number
+  distanciaM: number
+  tituloFicha: string
+}
+
+const filtroStatus = ref<number | null>(null)
+const dialogNovaMeta = ref(false)
+const carregando = ref(false)
+const salvando = ref(false)
+const mensagem = ref<{ tipo: 'success' | 'error' | 'info'; texto: string } | null>(null)
+
+const metas = ref<MetaExibicao[]>([])
+const opcoesSeries = ref<OpcaoSerie[]>([])
+
+const novaMeta = ref({
+  codSerieFicha: null as number | null,
+  tituloMeta: '',
+  tipoNado: 0,
+  distanciaAlvoM: 100,
+  tempoAlvoSeg: 75
+})
+
+const metasFiltradas = computed(() => {
+  if (filtroStatus.value === null) return metas.value
+  return metas.value.filter((m) => m.status === filtroStatus.value)
+})
+
+const rotuloStatus = (status: number) => {
+  if (status === 1) return 'Concluida'
+  if (status === 2) return 'Cancelada'
+  return 'Em Andamento'
+}
+
+const carregarSeries = async () => {
+  const fichas = await fichaService.listar()
+  opcoesSeries.value = fichas.flatMap((ficha) =>
+    ficha.series.map((serie) => ({
+      codSerieFicha: serie.codSerieFicha,
+      tipoNado: serie.tipoNado,
+      distanciaM: serie.distanciaM,
+      tituloFicha: ficha.tituloFicha,
+      label: `${ficha.tituloFicha} · ${serie.ordem}. ${serie.quantidadeRepeticoes}x${serie.distanciaM}m ${nomeNado(serie.tipoNado)}`
+    }))
+  )
+}
+
+const carregarMetas = async () => {
+  carregando.value = true
+  mensagem.value = null
+
+  try {
+    await carregarSeries()
+    const lista = await metaService.listar()
+
+    const comProgresso = await Promise.all(
+      lista.map(async (meta) => {
+        try {
+          const progresso = await metaService.obterProgresso(meta.codMeta)
+          return {
+            ...meta,
+            progresso: Math.round(progresso.percentualAtingimento ?? 0),
+            melhorPace: progresso.melhorPaceRealizadoSeg,
+            tentativas: progresso.historicoTentativas?.length ?? 0,
+            status: progresso.status ?? meta.status
+          }
+        } catch {
+          return {
+            ...meta,
+            progresso: 0,
+            melhorPace: null,
+            tentativas: 0
+          }
+        }
+      })
+    )
+
+    metas.value = comProgresso
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel carregar as metas.')
+    }
+  } finally {
+    carregando.value = false
+  }
+}
+
+const abrirNovaMeta = () => {
+  novaMeta.value = {
+    codSerieFicha: opcoesSeries.value[0]?.codSerieFicha ?? null,
+    tituloMeta: '',
+    tipoNado: opcoesSeries.value[0]?.tipoNado ?? 0,
+    distanciaAlvoM: opcoesSeries.value[0]?.distanciaM ?? 100,
+    tempoAlvoSeg: 75
+  }
+  dialogNovaMeta.value = true
+}
+
+const aoSelecionarSerie = (codSerieFicha: number) => {
+  const serie = opcoesSeries.value.find((s) => s.codSerieFicha === codSerieFicha)
+  if (!serie) return
+
+  novaMeta.value.tipoNado = serie.tipoNado
+  novaMeta.value.distanciaAlvoM = serie.distanciaM
+  if (!novaMeta.value.tituloMeta.trim()) {
+    novaMeta.value.tituloMeta = `Meta ${serie.distanciaM}m ${nomeNado(serie.tipoNado)}`
+  }
+}
+
+const salvarMeta = async () => {
+  if (!novaMeta.value.codSerieFicha || !novaMeta.value.tituloMeta.trim()) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: 'Informe a serie e o titulo da meta.'
+    }
+    return
+  }
+
+  salvando.value = true
+  mensagem.value = null
+
+  try {
+    await metaService.criar({
+      codSerieFicha: novaMeta.value.codSerieFicha,
+      tituloMeta: novaMeta.value.tituloMeta.trim(),
+      tipoNado: novaMeta.value.tipoNado,
+      distanciaAlvoM: novaMeta.value.distanciaAlvoM,
+      tempoAlvoSeg: novaMeta.value.tempoAlvoSeg,
+      modoAvaliacao: 0
+    })
+
+    dialogNovaMeta.value = false
+    await carregarMetas()
+    mensagem.value = { tipo: 'success', texto: 'Meta criada com sucesso.' }
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel criar a meta.')
+    }
+  } finally {
+    salvando.value = false
+  }
+}
+
+const marcarConcluida = async (id: number) => {
+  try {
+    await metaService.alterarStatus(id, 1)
+    await carregarMetas()
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel concluir a meta.')
+    }
+  }
+}
+
+const excluirMeta = async (id: number) => {
+  if (!confirm('Deseja excluir esta meta?')) return
+
+  try {
+    await metaService.excluir(id)
+    await carregarMetas()
+  } catch (error) {
+    mensagem.value = {
+      tipo: 'error',
+      texto: extrairMensagemErro(error, 'Nao foi possivel excluir a meta.')
+    }
+  }
+}
+
+onMounted(carregarMetas)
+</script>
+
+
+===== ARQUIVO: frontend\src\views\PiscinaConfigView.vue =====
+
+<template>
+  <v-container max-width="800">
+    <div class="mb-6">
+      <h1 class="text-h5 font-weight-bold text-primary mb-1">
+        <v-icon icon="mdi-pool" class="mr-2"></v-icon>Configuracao da Piscina
+      </h1>
+      <p class="text-body-2 text-medium-emphasis">
+        Defina os parametros da sua piscina padrao para o calculo correto dos treinos e metricas.
+      </p>
+    </div>
+
+    <v-card class="pa-6 rounded-lg elevation-2 mb-6">
+      <v-alert
+        v-if="mensagem"
+        :type="mensagem.tipo"
+        variant="tonal"
+        density="compact"
+        class="mb-6"
+      >
+        {{ mensagem.texto }}
+      </v-alert>
+
+      <v-form @submit.prevent="salvarConfig">
+        <h2 class="text-subtitle-1 font-weight-bold mb-4 text-primary">Tamanho da Piscina</h2>
+        <v-radio-group v-model="tamanhoPiscinaM" inline class="mb-6">
+          <v-radio
+            label="Piscina Curta (25 Metros)"
+            :value="25"
+            color="primary"
+            class="mr-6"
+          ></v-radio>
+          <v-radio
+            label="Piscina Olimpica (50 Metros)"
+            :value="50"
+            color="primary"
+          ></v-radio>
+        </v-radio-group>
+
+        <v-divider class="my-6"></v-divider>
+
+        <h2 class="text-subtitle-1 font-weight-bold mb-4 text-primary">Modo de Contagem Padrao</h2>
+        <v-radio-group v-model="formaContagem" class="mb-6">
+          <v-radio
+            label="Por Distancia Absoluta em Metros (Ex: 100m, 200m)"
+            :value="0"
+            color="primary"
+            class="mb-2"
+          ></v-radio>
+          <v-radio
+            label="Por Numero de Voltas/Piscinas (Ex: 4 voltas, 8 voltas)"
+            :value="1"
+            color="primary"
+          ></v-radio>
+        </v-radio-group>
+
+        <div class="d-flex justify-end">
+          <v-btn
+            type="submit"
+            color="primary"
+            size="large"
+            prepend-icon="mdi-content-save"
+            :loading="carregando"
+          >
+            Salvar Configuracoes
+          </v-btn>
+        </div>
+      </v-form>
+    </v-card>
+  </v-container>
+</template>
+
+<script setup lang="ts">
+    import { ref, onMounted } from 'vue'
+    import piscinaService from '@/services/piscinaService'
+    import { extrairMensagemErro } from '@/services/erros'
+
+    const tamanhoPiscinaM = ref<number>(25)
+    const formaContagem = ref<number>(0)
+    const carregando = ref(false)
+    const possuiConfiguracao = ref(false)
+    const mensagem = ref<{ tipo: 'success' | 'error'; texto: string } | null>(null)
+
+    onMounted(async () => {
+        try {
+            const config = await piscinaService.obterConfiguracao()
+
+            if (config) {
+                tamanhoPiscinaM.value = config.tamanhoM
+                formaContagem.value = config.formaContagem
+                possuiConfiguracao.value = true
+            }
+        } catch (error) {
+            mensagem.value = {
+                tipo: 'error',
+                texto: extrairMensagemErro(error, 'Nao foi possivel carregar a configuracao atual.')
+            }
+        }
+    })
+
+    const salvarConfig = async () => {
+        carregando.value = true
+        mensagem.value = null
+
+        const dados = {
+            tamanhoM: tamanhoPiscinaM.value,
+            formaContagem: formaContagem.value
+        }
+
+        try {
+            if (possuiConfiguracao.value) {
+                await piscinaService.atualizarConfiguracao(dados)
+            } else {
+                await piscinaService.criarConfiguracao(dados)
+                possuiConfiguracao.value = true
+            }
+
+            mensagem.value = { tipo: 'success', texto: 'Configuracoes da piscina salvas com sucesso!' }
+        } catch (error) {
+            mensagem.value = {
+                tipo: 'error',
+                texto: extrairMensagemErro(error, 'Erro ao salvar configuracao.')
+            }
+        } finally {
+            carregando.value = false
+        }
+    }
+</script>
+
+
+===== ARQUIVO: frontend\src\views\RegisterView.vue =====
+
+<template>
+  <v-container class="fill-height justify-center">
+    <v-responsive max-width="480">
+      <v-card class="pa-6 pa-md-8 elevation-4 rounded-lg">
+        <div class="text-center mb-6">
+          <v-icon icon="mdi-account-plus" size="48" color="primary" class="mb-2"></v-icon>
+          <h1 class="text-h5 font-weight-bold text-primary">Criar Conta no toSwim</h1>
+          <p class="text-body-2 text-medium-emphasis">Cadastre-se para acompanhar sua performance na natação</p>
+        </div>
+
+        <v-alert
+          v-if="mensagemErro"
+          type="error"
+          variant="tonal"
+          density="compact"
+          class="mb-4"
+        >
+          {{ mensagemErro }}
+        </v-alert>
+
+        <v-form v-model="formValido" @submit.prevent="cadastrar">
+          <v-text-field
+            v-model="nome"
+            label="Nome Completo"
+            prepend-inner-icon="mdi-account-outline"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+            :rules="[v => !!v || 'Nome é obrigatório']"
+            required
+          ></v-text-field>
+
+          <v-text-field
+            v-model="email"
+            label="E-mail"
+            prepend-inner-icon="mdi-email-outline"
+            type="email"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+            :rules="[
+              v => !!v || 'E-mail é obrigatório',
+              v => /.+@.+\..+/.test(v) || 'E-mail deve ser válido'
+            ]"
+            required
+          ></v-text-field>
+
+          <v-text-field
+            v-model="senha"
+            label="Senha"
+            prepend-inner-icon="mdi-lock-outline"
+            :type="exibirSenha ? 'text' : 'password'"
+            :append-inner-icon="exibirSenha ? 'mdi-eye-off' : 'mdi-eye'"
+            @click:append-inner="exibirSenha = !exibirSenha"
+            variant="outlined"
+            density="comfortable"
+            class="mb-3"
+            :rules="[
+              v => !!v || 'Senha é obrigatória',
+              v => v.length >= 6 || 'Mínimo de 6 caracteres'
+            ]"
+            required
+          ></v-text-field>
+
+          <v-text-field
+            v-model="confirmarSenha"
+            label="Confirmar Senha"
+            prepend-inner-icon="mdi-lock-check-outline"
+            :type="exibirSenha ? 'text' : 'password'"
+            variant="outlined"
+            density="comfortable"
+            class="mb-4"
+            :rules="[
+              v => !!v || 'Confirmação de senha é obrigatória',
+              v => v === senha || 'As senhas não coincidem'
+            ]"
+            required
+          ></v-text-field>
+
+          <v-btn
+            type="submit"
+            color="primary"
+            block
+            size="large"
+            elevation="2"
+            :disabled="!formValido"
+            :loading="carregando"
+          >
+            Cadastrar Atleta
+          </v-btn>
+        </v-form>
+
+        <div class="text-center mt-6">
+          <span class="text-body-2 text-medium-emphasis">Já tem conta?</span>
+          <v-btn variant="text" color="primary" density="comfortable" to="/login">
+            Fazer login
+          </v-btn>
+        </div>
+      </v-card>
+    </v-responsive>
+  </v-container>
+</template>
+
+
+<script setup lang="ts">
+    import { ref } from 'vue'
+    import { useRouter } from 'vue-router'
+    import authService from '@/services/authService'
+    import { extrairMensagemErro } from '@/services/erros'
+
+    const router = useRouter()
+
+    const formValido = ref(false)
+    const nome = ref('')
+    const email = ref('')
+    const senha = ref('')
+    const confirmarSenha = ref('')
+    const exibirSenha = ref(false)
+    const carregando = ref(false)
+    const mensagemErro = ref('')
+
+    const cadastrar = async () => {
+        if (!formValido.value) return
+
+        carregando.value = true
+        mensagemErro.value = ''
+
+        try {
+            await authService.cadastrar({
+                nome: nome.value,
+                email: email.value,
+                senha: senha.value
+            })
+
+            router.push('/piscina')
+        } catch (error) {
+            mensagemErro.value = extrairMensagemErro(error, 'Não foi possível concluir o cadastro.')
+        } finally {
+            carregando.value = false
+        }
+    }
+</script>
+
+
+===== ARQUIVO: frontend\src\views\TreinoExecucaoView.vue =====
+
+
+===== ARQUIVO: frontend\package.json =====
+
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "axios": "^1.19.0",
+    "pinia": "^4.0.2",
+    "vue": "^3.5.40",
+    "vue-router": "^4.6.4",
+    "vuetify": "^4.1.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/tsconfig": "^0.9.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vite-plugin-vuetify": "^2.1.3",
+    "vue-tsc": "^3.3.8"
+  }
+}
+
+
+===== INVENTARIO DE ARQUIVOS RELEVANTES DO BACKEND =====
+backend\ToSwim.Api\Controllers\AuthController.cs
+backend\ToSwim.Api\Controllers\FichasBaseController.cs
+backend\ToSwim.Api\Controllers\HistoricoController.cs
+backend\ToSwim.Api\Controllers\MetasController.cs
+backend\ToSwim.Api\Controllers\MetricasController.cs
+backend\ToSwim.Api\Controllers\PiscinaConfiguracaoController.cs
+backend\ToSwim.Api\Controllers\RepeticoesController.cs
+backend\ToSwim.Api\Controllers\SeriesFichaController.cs
+backend\ToSwim.Api\Controllers\TreinoMetaController.cs
+backend\ToSwim.Api\Controllers\TreinosController.cs
+backend\ToSwim.Api\Controllers\UsersController.cs
+backend\ToSwim.Api\Program.cs
+backend\ToSwim.Application\DTOs\Auth\LoginRequestDto.cs
+backend\ToSwim.Application\DTOs\Auth\LoginResponseDto.cs
+backend\ToSwim.Application\DTOs\Auth\RegistroRequestDto.cs
+backend\ToSwim.Application\DTOs\ConfigPiscina\ConfigPiscinaRequestDto.cs
+backend\ToSwim.Application\DTOs\ConfigPiscina\ConfigPiscinaResponseDto.cs
+backend\ToSwim.Application\DTOs\FichaBase\FichaBaseRequestDto.cs
+backend\ToSwim.Application\DTOs\FichaBase\FichaBaseResponseDto.cs
+backend\ToSwim.Application\DTOs\FichaBase\SerieFichaRequestDto.cs
+backend\ToSwim.Application\DTOs\FichaBase\SerieFichaResponseDto.cs
+backend\ToSwim.Application\DTOs\Meta\MetaRequestDto.cs
+backend\ToSwim.Application\DTOs\Meta\MetaResponseDto.cs
+backend\ToSwim.Application\DTOs\Metricas\DashboardResumoDto.cs
+backend\ToSwim.Application\DTOs\Metricas\EvolucaoPaceDto.cs
+backend\ToSwim.Application\DTOs\Metricas\ProgressoMetaDto.cs
+backend\ToSwim.Application\DTOs\Metricas\RecordePessoalDto.cs
+backend\ToSwim.Application\DTOs\Repeticao\RepeticaoRequestDto.cs
+backend\ToSwim.Application\DTOs\Repeticao\RepeticaoResponseDto.cs
+backend\ToSwim.Application\DTOs\SerieTreino\SerieTreinoRequestDto.cs
+backend\ToSwim.Application\DTOs\SerieTreino\SerieTreinoResponseDto.cs
+backend\ToSwim.Application\DTOs\Treino\AtualizarTreinoRequestDto.cs
+backend\ToSwim.Application\DTOs\Treino\IniciarTreinoRequestDto.cs
+backend\ToSwim.Application\DTOs\Treino\TreinoResponseDto.cs
+backend\ToSwim.Application\DTOs\TreinoMeta\TreinoMetaRequestDto.cs
+backend\ToSwim.Application\DTOs\TreinoMeta\TreinoMetaResponseDto.cs
+backend\ToSwim.Application\DTOs\Usuario\AtualizarSenhaRequestDto.cs
+backend\ToSwim.Application\DTOs\Usuario\UsuarioResponseDto.cs
+backend\ToSwim.Application\Interfaces\IAuthService.cs
+backend\ToSwim.Application\Interfaces\IConfigPiscinaService.cs
+backend\ToSwim.Application\Interfaces\IFichaBaseService.cs
+backend\ToSwim.Application\Interfaces\IJwtService.cs
+backend\ToSwim.Application\Interfaces\IMetaService.cs
+backend\ToSwim.Application\Interfaces\IMetricasService.cs
+backend\ToSwim.Application\Interfaces\IRepeticaoSerieTreinoService.cs
+backend\ToSwim.Application\Interfaces\ISerieFichaService.cs
+backend\ToSwim.Application\Interfaces\ITreinoMetaService.cs
+backend\ToSwim.Application\Interfaces\ITreinoService.cs
+backend\ToSwim.Application\Interfaces\IUsuarioService.cs
+backend\ToSwim.Application\Services\AuthService.cs
+backend\ToSwim.Application\Services\ConfigPiscinaService.cs
+backend\ToSwim.Application\Services\FichaBaseService.cs
+backend\ToSwim.Application\Services\JwtService.cs
+backend\ToSwim.Application\Services\MetaService.cs
+backend\ToSwim.Application\Services\MetricasService.cs
+backend\ToSwim.Application\Services\RepeticaoSerieTreinoService.cs
+backend\ToSwim.Application\Services\SerieFichaService.cs
+backend\ToSwim.Application\Services\TreinoMetaService.cs
+backend\ToSwim.Application\Services\TreinoService.cs
+backend\ToSwim.Application\Services\UsuarioService.cs
+
+===== DEPENDENCIA E TESTES ENCONTRADOS =====
+
+--- npm ls @playwright/test ---
+toswim-e2e@1.0.0 C:\Users\dtiDigital\source\repos\anacristinags\toSwim-\e2e
+`-- @playwright/test@1.62.1
+
+
+
+--- npx playwright test --list ---
+Listing tests:
+  [web] ÔÇ║ ui\cadastro.spec.ts:8:3 ÔÇ║ Tela de cadastro de atleta ÔÇ║ exibe o formul├írio de cadastro
+  [web] ÔÇ║ ui\cadastro.spec.ts:16:3 ÔÇ║ Tela de cadastro de atleta ÔÇ║ bot├úo de cadastro fica desabilitado enquanto o formul├írio ├® inv├ílido
+  [web] ÔÇ║ ui\cadastro.spec.ts:21:3 ÔÇ║ Tela de cadastro de atleta ÔÇ║ habilita o envio ap├│s preencher os campos corretamente
+  [web] ÔÇ║ ui\cadastro.spec.ts:30:3 ÔÇ║ Tela de cadastro de atleta ÔÇ║ valida senha e confirma├º├úo de senha diferentes
+  [web] ÔÇ║ ui\fichas.spec.ts:5:3 ÔÇ║ Tela de fichas de treino ÔÇ║ exibe estado vazio para atleta sem fichas
+  [web] ÔÇ║ ui\fichas.spec.ts:16:3 ÔÇ║ Tela de fichas de treino ÔÇ║ cria uma ficha e adiciona uma s├®rie
+  [web] ÔÇ║ ui\historico.spec.ts:6:3 ÔÇ║ Tela de hist├│rico de treinos ÔÇ║ exibe estado vazio quando n├úo h├í treinos conclu├¡dos
+  [web] ÔÇ║ ui\historico.spec.ts:16:3 ÔÇ║ Tela de hist├│rico de treinos ÔÇ║ lista treino conclu├¡do e abre o detalhe
+  [web] ÔÇ║ ui\metas.spec.ts:6:3 ÔÇ║ Tela de metas de tempo ÔÇ║ bot├úo Nova Meta fica desabilitado sem s├®ries de ficha
+  [web] ÔÇ║ ui\metas.spec.ts:15:3 ÔÇ║ Tela de metas de tempo ÔÇ║ cria uma meta a partir de uma s├®rie existente
+  [web] ÔÇ║ ui\navegacao.spec.ts:9:3 ÔÇ║ Navega├º├úo principal ÔÇ║ rota raiz redireciona para /fichas
+  [web] ÔÇ║ ui\navegacao.spec.ts:14:3 ÔÇ║ Navega├º├úo principal ÔÇ║ barra de topo exibe o nome da aplica├º├úo
+  [web] ÔÇ║ ui\navegacao.spec.ts:19:3 ÔÇ║ Navega├º├úo principal ÔÇ║ menu lateral navega entre as telas
+  [web] ÔÇ║ ui\piscina.spec.ts:5:3 ÔÇ║ Tela de configura├º├úo da piscina ÔÇ║ exibe o formul├írio e salva a configura├º├úo padr├úo
+  [web] ÔÇ║ ui\piscina.spec.ts:19:3 ÔÇ║ Tela de configura├º├úo da piscina ÔÇ║ permite alterar para piscina ol├¡mpica e salvar novamente
+  [web] ÔÇ║ ui\treinos.spec.ts:6:3 ÔÇ║ Tela de execu├º├úo do treino ÔÇ║ alerta para configurar a piscina antes de treinar
+  [web] ÔÇ║ ui\treinos.spec.ts:18:3 ÔÇ║ Tela de execu├º├úo do treino ÔÇ║ inicia o treino, registra um tempo e finaliza
+  [api] ÔÇ║ api\auth.spec.ts:5:3 ÔÇ║ POST /auth/registro ÔÇ║ registra um novo atleta e retorna token JWT
+  [api] ÔÇ║ api\auth.spec.ts:19:3 ÔÇ║ POST /auth/registro ÔÇ║ rejeita cadastro com e-mail inv├ílido
+  [api] ÔÇ║ api\auth.spec.ts:27:3 ÔÇ║ POST /auth/registro ÔÇ║ rejeita cadastro com senha curta
+  [api] ÔÇ║ api\auth.spec.ts:35:3 ÔÇ║ POST /auth/registro ÔÇ║ rejeita e-mail duplicado
+  [api] ÔÇ║ api\auth.spec.ts:48:3 ÔÇ║ POST /auth/login ÔÇ║ autentica um atleta previamente cadastrado
+  [api] ÔÇ║ api\auth.spec.ts:60:3 ÔÇ║ POST /auth/login ÔÇ║ rejeita login com senha incorreta
+  [api] ÔÇ║ api\auth.spec.ts:70:3 ÔÇ║ POST /auth/login ÔÇ║ rejeita login de e-mail n├úo cadastrado
+  [api] ÔÇ║ api\fichas.spec.ts:6:3 ÔÇ║ GET /fichas-base ÔÇ║ retorna 401 sem token de autentica├º├úo
+  [api] ÔÇ║ api\fichas.spec.ts:11:3 ÔÇ║ GET /fichas-base ÔÇ║ lista vazia para atleta rec├®m-cadastrado
+  [api] ÔÇ║ api\fichas.spec.ts:24:3 ÔÇ║ POST /fichas-base ÔÇ║ cria uma ficha base
+  [api] ÔÇ║ api\fichas.spec.ts:39:3 ÔÇ║ POST /fichas-base ÔÇ║ rejeita ficha sem t├¡tulo
+  [api] ÔÇ║ api\fichas.spec.ts:52:3 ÔÇ║ s├®ries e duplica├º├úo de ficha ÔÇ║ adiciona s├®rie, consulta a ficha e duplica
+  [api] ÔÇ║ api\fichas.spec.ts:95:3 ÔÇ║ s├®ries e duplica├º├úo de ficha ÔÇ║ exclui ficha sem v├¡nculos e some da listagem
+  [api] ÔÇ║ api\historico.spec.ts:6:3 ÔÇ║ GET /historico/treinos ÔÇ║ retorna 401 sem token de autentica├º├úo
+  [api] ÔÇ║ api\historico.spec.ts:11:3 ÔÇ║ GET /historico/treinos ÔÇ║ lista vazia quando n├úo h├í treinos conclu├¡dos
+  [api] ÔÇ║ api\historico.spec.ts:22:3 ÔÇ║ GET /historico/treinos ÔÇ║ lista o treino ap├│s finaliza├º├úo e rejeita detalhe de treino em andamento
+  [api] ÔÇ║ api\metas.spec.ts:6:3 ÔÇ║ GET /metas ÔÇ║ retorna 401 sem token de autentica├º├úo
+  [api] ÔÇ║ api\metas.spec.ts:11:3 ÔÇ║ GET /metas ÔÇ║ lista vazia para atleta sem metas
+  [api] ÔÇ║ api\metas.spec.ts:24:3 ÔÇ║ POST /metas ÔÇ║ cria meta vinculada a uma s├®rie da ficha e calcula o pace alvo
+  [api] ÔÇ║ api\metas.spec.ts:53:3 ÔÇ║ POST /metas ÔÇ║ rejeita tempo alvo zero
+  [api] ÔÇ║ api\metas.spec.ts:74:3 ÔÇ║ status e exclus├úo de meta ÔÇ║ conclui e depois exclui a meta
+  [api] ÔÇ║ api\metricas.spec.ts:6:3 ÔÇ║ GET /dashboard/resumo e m├®tricas ÔÇ║ retorna 401 em /dashboard/resumo sem token
+  [api] ÔÇ║ api\metricas.spec.ts:11:3 ÔÇ║ GET /dashboard/resumo e m├®tricas ÔÇ║ resumo zerado para atleta sem treinos conclu├¡dos
+  [api] ÔÇ║ api\metricas.spec.ts:28:3 ÔÇ║ GET /dashboard/resumo e m├®tricas ÔÇ║ resumo e evolu├º├úo de pace ap├│s um treino conclu├¡do
+  [api] ÔÇ║ api\metricas.spec.ts:62:3 ÔÇ║ GET /dashboard/resumo e m├®tricas ÔÇ║ progresso de meta inicia em zero sem tentativas
+  [api] ÔÇ║ api\piscina.spec.ts:5:3 ÔÇ║ GET /piscina-configuracao/me ÔÇ║ retorna 401 sem token de autentica├º├úo
+  [api] ÔÇ║ api\piscina.spec.ts:10:3 ÔÇ║ GET /piscina-configuracao/me ÔÇ║ retorna 404 quando o atleta ainda n├úo configurou a piscina
+  [api] ÔÇ║ api\piscina.spec.ts:24:3 ÔÇ║ POST /piscina-configuracao ÔÇ║ cria a configura├º├úo de piscina do atleta autenticado
+  [api] ÔÇ║ api\piscina.spec.ts:42:3 ÔÇ║ POST /piscina-configuracao ÔÇ║ rejeita tamanho de piscina inv├ílido
+  [api] ÔÇ║ api\piscina.spec.ts:53:3 ÔÇ║ POST /piscina-configuracao ÔÇ║ rejeita segunda configura├º├úo para o mesmo atleta
+  [api] ÔÇ║ api\piscina.spec.ts:71:3 ÔÇ║ PUT /piscina-configuracao/me ÔÇ║ atualiza a configura├º├úo existente
+  [api] ÔÇ║ api\treinos.spec.ts:12:3 ÔÇ║ POST /treinos ÔÇ║ retorna 401 sem token de autentica├º├úo
+  [api] ÔÇ║ api\treinos.spec.ts:19:3 ÔÇ║ POST /treinos ÔÇ║ inicia um treino a partir de uma ficha com s├®ries
+  [api] ÔÇ║ api\treinos.spec.ts:46:3 ÔÇ║ POST /treinos ÔÇ║ rejeita tamanho de piscina inv├ílido ao iniciar
+  [api] ÔÇ║ api\treinos.spec.ts:61:3 ÔÇ║ execu├º├úo, repeti├º├úo, finalizar e cancelar ÔÇ║ registra tiro, atualiza a s├®rie e finaliza o treino
+  [api] ÔÇ║ api\treinos.spec.ts:107:3 ÔÇ║ execu├º├úo, repeti├º├úo, finalizar e cancelar ÔÇ║ cancela treino em andamento
+  [api] ÔÇ║ api\treinos.spec.ts:124:3 ÔÇ║ execu├º├úo, repeti├º├úo, finalizar e cancelar ÔÇ║ rejeita repeti├º├úo com dura├º├úo zero
+  [api] ÔÇ║ api\users.spec.ts:5:3 ÔÇ║ GET /users/me ÔÇ║ retorna 401 sem token de autentica├º├úo
+  [api] ÔÇ║ api\users.spec.ts:10:3 ÔÇ║ GET /users/me ÔÇ║ retorna os dados do atleta autenticado
+Total: 56 tests in 15 files
+

@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test'
+import { autenticarNaPagina } from '../../utils/auth'
 
 test.describe('Navegação principal', () => {
+  test.beforeEach(async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+  })
+
   test('rota raiz redireciona para /fichas', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveURL(/\/fichas$/)

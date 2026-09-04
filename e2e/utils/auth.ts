@@ -1,10 +1,19 @@
-import type { APIRequestContext } from '@playwright/test'
+import type { APIRequestContext, Page } from '@playwright/test'
+
+/** Mesma chave usada em frontend/src/services/tokenStorage.ts */
+export const CHAVE_TOKEN_FRONTEND = 'user_token'
+
+export const API_BASE = (process.env.API_URL ?? 'http://localhost:5064').replace(/\/$/, '')
 
 export interface AtletaRegistrado {
   nome: string
   email: string
   senha: string
   token: string
+}
+
+export function cabecalhoAuth(token: string): { Authorization: string } {
+  return { Authorization: `Bearer ${token}` }
 }
 
 /**
@@ -28,7 +37,7 @@ export async function registrarAtleta(
   const email = overrides.email ?? gerarEmailUnico()
   const senha = overrides.senha ?? 'senha123'
 
-  const response = await request.post('/auth/registro', {
+  const response = await request.post(`${API_BASE}/auth/registro`, {
     data: { nome, email, senha },
   })
 
@@ -38,4 +47,24 @@ export async function registrarAtleta(
 
   const body = await response.json()
   return { nome, email, senha, token: body.token ?? body.Token }
+}
+
+/**
+ * Injeta o JWT no localStorage antes do Vue inicializar o tokenStorage,
+ * para acessar rotas protegidas pelo router.
+ */
+export async function autenticarNaPagina(
+  page: Page,
+  request: APIRequestContext,
+): Promise<AtletaRegistrado> {
+  const atleta = await registrarAtleta(request)
+
+  await page.addInitScript(
+    ({ chave, token }) => {
+      localStorage.setItem(chave, token)
+    },
+    { chave: CHAVE_TOKEN_FRONTEND, token: atleta.token },
+  )
+
+  return atleta
 }
