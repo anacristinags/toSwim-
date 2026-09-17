@@ -135,7 +135,7 @@
 
     <v-dialog v-model="dialogNovaMeta" max-width="560">
       <v-card class="pa-4 rounded-lg">
-        <v-card-title class="font-weight-bold text-primary">Criar Meta de Tempo</v-card-title>
+        <v-card-title tag="h2" class="font-weight-bold text-primary">Criar Meta de Tempo</v-card-title>
         <v-card-text>
           <v-select
             v-model="novaMeta.codSerieFicha"

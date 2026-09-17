@@ -30,4 +30,21 @@ test.describe('Tela de configuração da piscina', () => {
 
     await expect(page.getByText('Configuracoes da piscina salvas com sucesso!')).toBeVisible()
   })
+
+  test('configuracao salva persiste apos reload da pagina', async ({ page, request }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/piscina')
+
+    await page.getByRole('radio', { name: 'Piscina Olimpica (50 Metros)' }).check()
+    await page.getByRole('radio', { name: 'Por Numero de Voltas/Piscinas (Ex: 4 voltas, 8 voltas)' }).check()
+    await page.getByRole('button', { name: 'Salvar Configuracoes' }).click()
+    await expect(page.getByText('Configuracoes da piscina salvas com sucesso!')).toBeVisible()
+
+    await page.reload()
+
+    await expect(page.getByRole('radio', { name: 'Piscina Olimpica (50 Metros)' })).toBeChecked()
+    await expect(
+      page.getByRole('radio', { name: 'Por Numero de Voltas/Piscinas (Ex: 4 voltas, 8 voltas)' }),
+    ).toBeChecked()
+  })
 })

@@ -139,7 +139,7 @@
 
     <v-dialog v-model="dialogNovaFicha" max-width="500">
       <v-card class="pa-4 rounded-lg">
-        <v-card-title class="font-weight-bold text-primary">Criar Nova Ficha Base</v-card-title>
+        <v-card-title tag="h2" class="font-weight-bold text-primary">Criar Nova Ficha Base</v-card-title>
         <v-card-text>
           <v-text-field
             v-model="novaFichaTitulo"
@@ -158,7 +158,7 @@
 
     <v-dialog v-model="dialogNovaSerie" max-width="500">
       <v-card class="pa-4 rounded-lg">
-        <v-card-title class="font-weight-bold text-primary">Adicionar Serie ao Treino</v-card-title>
+        <v-card-title tag="h2" class="font-weight-bold text-primary">Adicionar Serie ao Treino</v-card-title>
         <v-card-text>
           <v-select
             v-model="novaSerie.tipoNado"

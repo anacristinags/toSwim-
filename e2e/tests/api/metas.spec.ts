@@ -68,6 +68,116 @@ test.describe('POST /metas', () => {
 
     expect(response.status()).toBe(400)
   })
+
+  test('rejeita tempo alvo negativo', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta tempo negativo ${Date.now()}`)
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: idSerie,
+        tituloMeta: 'Meta tempo negativo',
+        tipoNado: 0,
+        distanciaAlvoM: 100,
+        tempoAlvoSeg: -10,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
+  test('rejeita distancia alvo zero', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta distancia zero ${Date.now()}`)
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: idSerie,
+        tituloMeta: 'Meta distancia zero',
+        tipoNado: 0,
+        distanciaAlvoM: 0,
+        tempoAlvoSeg: 75,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
+  test('atleta A nao usa serie do atleta B para criar meta (isolamento)', async ({ request }) => {
+    const { token: tokenA } = await registrarAtleta(request)
+    const { token: tokenB } = await registrarAtleta(request)
+    const { idSerie: idSerieB } = await criarFichaComSerie(
+      request,
+      tokenB,
+      `Ficha serie de B para meta ${Date.now()}`,
+    )
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(tokenA),
+      data: {
+        codSerieFicha: idSerieB,
+        tituloMeta: 'Meta usando serie de outro atleta',
+        tipoNado: 0,
+        distanciaAlvoM: 100,
+        tempoAlvoSeg: 75,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(403)
+  })
+})
+
+test.describe('isolamento de metas entre atletas', () => {
+  test('atleta A nao acessa meta do atleta B', async ({ request }) => {
+    const { token: tokenA } = await registrarAtleta(request)
+    const { token: tokenB } = await registrarAtleta(request)
+    const { idSerie: idSerieB } = await criarFichaComSerie(
+      request,
+      tokenB,
+      `Ficha meta B isolamento ${Date.now()}`,
+    )
+    const metaB = await criarMeta(request, tokenB, {
+      codSerieFicha: idSerieB,
+      tituloMeta: 'Meta do atleta B',
+    })
+    const idMetaB = metaB.codMeta ?? metaB.CodMeta
+
+    const response = await request.get(`/metas/${idMetaB}`, {
+      headers: cabecalhoAuth(tokenA),
+    })
+
+    expect(response.status()).toBe(404)
+  })
+
+  test('atleta A nao exclui meta do atleta B', async ({ request }) => {
+    const { token: tokenA } = await registrarAtleta(request)
+    const { token: tokenB } = await registrarAtleta(request)
+    const { idSerie: idSerieB } = await criarFichaComSerie(
+      request,
+      tokenB,
+      `Ficha meta B excluir isolamento ${Date.now()}`,
+    )
+    const metaB = await criarMeta(request, tokenB, {
+      codSerieFicha: idSerieB,
+      tituloMeta: 'Meta do atleta B para exclusao',
+    })
+    const idMetaB = metaB.codMeta ?? metaB.CodMeta
+
+    const excluir = await request.delete(`/metas/${idMetaB}`, {
+      headers: cabecalhoAuth(tokenA),
+    })
+    expect(excluir.status()).toBe(404)
+
+    const aindaExiste = await request.get(`/metas/${idMetaB}`, {
+      headers: cabecalhoAuth(tokenB),
+    })
+    expect(aindaExiste.status()).toBe(200)
+  })
 })
 
 test.describe('status e exclusão de meta', () => {

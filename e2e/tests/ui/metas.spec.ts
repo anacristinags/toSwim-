@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { autenticarNaPagina } from '../../utils/auth'
-import { criarFichaComSerie } from '../../utils/api'
+import { API_BASE, autenticarNaPagina, cabecalhoAuth } from '../../utils/auth'
+import { criarFichaComSerie, criarMeta } from '../../utils/api'
 
 test.describe('Tela de metas de tempo', () => {
   test('botão Nova Meta fica desabilitado sem séries de ficha', async ({ page, request }) => {
@@ -29,5 +29,45 @@ test.describe('Tela de metas de tempo', () => {
     await expect(page.getByText('Meta criada com sucesso.')).toBeVisible()
     await expect(page.getByText(titulo)).toBeVisible()
     await expect(page.getByText('Em Andamento')).toBeVisible()
+  })
+
+  test('filtro por status (aba Ativas/Concluidas) reduz a lista exibida', async ({
+    page,
+    request,
+  }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    const { idSerie: idSerieAtiva } = await criarFichaComSerie(
+      request,
+      atleta.token,
+      `Ficha meta ativa ${Date.now()}`,
+    )
+    const { idSerie: idSerieConcluida } = await criarFichaComSerie(
+      request,
+      atleta.token,
+      `Ficha meta concluida ${Date.now()}`,
+    )
+    const tituloAtiva = `Meta ativa ${Date.now()}`
+    const tituloConcluida = `Meta concluida ${Date.now()}`
+    await criarMeta(request, atleta.token, { codSerieFicha: idSerieAtiva, tituloMeta: tituloAtiva })
+    const metaConcluida = await criarMeta(request, atleta.token, {
+      codSerieFicha: idSerieConcluida,
+      tituloMeta: tituloConcluida,
+    })
+    const idMetaConcluida = metaConcluida.codMeta ?? metaConcluida.CodMeta
+    await request.put(`${API_BASE}/metas/${idMetaConcluida}/status?status=1`, {
+      headers: cabecalhoAuth(atleta.token),
+    })
+
+    await page.goto('/metas')
+    await expect(page.getByText(tituloAtiva)).toBeVisible()
+    await expect(page.getByText(tituloConcluida)).toBeVisible()
+
+    await page.getByRole('tab', { name: 'Ativas' }).click()
+    await expect(page.getByText(tituloAtiva)).toBeVisible()
+    await expect(page.getByText(tituloConcluida)).toHaveCount(0)
+
+    await page.getByRole('tab', { name: 'Concluidas' }).click()
+    await expect(page.getByText(tituloConcluida)).toBeVisible()
+    await expect(page.getByText(tituloAtiva)).toHaveCount(0)
   })
 })

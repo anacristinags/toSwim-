@@ -24,7 +24,9 @@ test.describe('Tela de execução do treino', () => {
     await page.goto('/treino-execucao')
     await expect(page.getByRole('heading', { name: 'Escolha a Ficha para Treinar Hoje' })).toBeVisible()
 
-    await page.getByLabel('Selecione uma Ficha Base').click()
+    const selecaoFicha = page.getByLabel('Selecione uma Ficha Base')
+    await selecaoFicha.focus()
+    await selecaoFicha.press('Enter')
     await page.getByRole('option', { name: tituloFicha }).click()
 
     await expect(page.getByLabel('Titulo do treino do dia')).toHaveValue(tituloFicha)

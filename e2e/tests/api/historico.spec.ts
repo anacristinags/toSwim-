@@ -56,4 +56,25 @@ test.describe('GET /historico/treinos', () => {
     })
     expect(detalheAndamento.status()).toBe(400)
   })
+
+  test('atleta A nao acessa historico/detalhe de treino do atleta B (isolamento)', async ({
+    request,
+  }) => {
+    const { token: tokenA } = await registrarAtleta(request)
+    const { token: tokenB } = await registrarAtleta(request)
+    const tituloB = `Treino historico B ${Date.now()}`
+    const treinoB = await concluirTreinoComTempo(request, tokenB, tituloB)
+    const idTreinoB = treinoB.codTreino ?? treinoB.CodTreino
+
+    const detalhe = await request.get(`/historico/treinos/${idTreinoB}`, {
+      headers: cabecalhoAuth(tokenA),
+    })
+    expect(detalhe.status()).toBe(404)
+
+    const lista = await request.get('/historico/treinos', {
+      headers: cabecalhoAuth(tokenA),
+    })
+    expect(lista.status()).toBe(200)
+    expect(await lista.json()).toEqual([])
+  })
 })

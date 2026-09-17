@@ -32,6 +32,15 @@ test.describe('POST /auth/registro', () => {
     expect(response.status()).toBe(400)
   })
 
+  test('rejeita nome composto apenas por espacos', async ({ request }) => {
+    // [Required] no ASP.NET Core faz Trim() antes de validar o tamanho da string.
+    const response = await request.post('/auth/registro', {
+      data: { nome: '   ', email: gerarEmailUnico(), senha: 'senha123' },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
   test('rejeita e-mail duplicado', async ({ request }) => {
     const email = gerarEmailUnico()
     await registrarAtleta(request, { email })

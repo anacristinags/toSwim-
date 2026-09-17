@@ -50,6 +50,17 @@ test.describe('POST /piscina-configuracao', () => {
     expect(response.status()).toBe(400)
   })
 
+  test('rejeita forma de contagem fora do range permitido (0-1)', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.post('/piscina-configuracao', {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 25, formaContagem: 5 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
   test('rejeita segunda configuração para o mesmo atleta', async ({ request }) => {
     const { token } = await registrarAtleta(request)
 
