@@ -2,14 +2,16 @@ export const TIPOS_NADO = [
   { title: 'Crawl', value: 0 },
   { title: 'Costas', value: 1 },
   { title: 'Borboleta', value: 2 },
-  { title: 'Peito', value: 3 }
+  { title: 'Peito', value: 3 },
+  { title: 'Livre', value: 4 }
 ] as const
 
 const NOMES_NADO: Record<number, string> = {
   0: 'Crawl',
   1: 'Costas',
   2: 'Borboleta',
-  3: 'Peito'
+  3: 'Peito',
+  4: 'Livre'
 }
 
 export const nomeNado = (tipoNado: number): string =>

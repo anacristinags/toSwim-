@@ -87,7 +87,7 @@
 
       <v-chip color="primary" variant="outlined" class="mr-4">
         <v-icon start icon="mdi-pool"></v-icon>
-        Piscina: 25m
+        Piscina: {{ piscinaStore.tamanhoM }}m
       </v-chip>
     </v-app-bar>
 
@@ -101,13 +101,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import authService from '@/services/authService'
 import { autenticado } from '@/services/tokenStorage'
+import { usePiscinaStore } from '@/stores/piscina'
 
 const router = useRouter()
 const drawer = ref(true)
+const piscinaStore = usePiscinaStore()
+
+const carregarPiscina = () => {
+  if (autenticado.value) {
+    piscinaStore.carregar().catch(() => {})
+  }
+}
+
+onMounted(carregarPiscina)
+watch(autenticado, carregarPiscina)
 
 const sair = () => {
   authService.logout()

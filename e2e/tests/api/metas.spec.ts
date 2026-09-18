@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
-import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
-import { criarFichaComSerie, criarMeta } from '../../utils/api'
+import { API_BASE, cabecalhoAuth, registrarAtleta } from '../../utils/auth'
+import { concluirTreinoComPiscina, criarConfigPiscina, criarFichaComSerie, criarMeta } from '../../utils/api'
 
 test.describe('GET /metas', () => {
   test('retorna 401 sem token de autenticação', async ({ request }) => {
@@ -48,6 +48,69 @@ test.describe('POST /metas', () => {
       status: 0,
       codSerieFicha: idSerie,
     })
+  })
+
+  test('cria meta com tipoNado=4 (Livre)', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta livre ${Date.now()}`)
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: idSerie,
+        tituloMeta: 'Meta 100m Livre',
+        tipoNado: 4,
+        distanciaAlvoM: 100,
+        tempoAlvoSeg: 75,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({ tipoNado: 4 })
+  })
+
+  test('meta vinculada a ficha de 25m retorna tamanhoPiscinaM 25', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta 25m ${Date.now()}`, 25)
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: idSerie,
+        tituloMeta: 'Meta piscina 25m',
+        tipoNado: 0,
+        distanciaAlvoM: 100,
+        tempoAlvoSeg: 75,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({ tamanhoPiscinaM: 25 })
+  })
+
+  test('meta vinculada a ficha de 50m retorna tamanhoPiscinaM 50', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta 50m ${Date.now()}`, 50)
+
+    const response = await request.post('/metas', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: idSerie,
+        tituloMeta: 'Meta piscina 50m',
+        tipoNado: 0,
+        distanciaAlvoM: 100,
+        tempoAlvoSeg: 75,
+        modoAvaliacao: 0,
+      },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({ tamanhoPiscinaM: 50 })
   })
 
   test('rejeita tempo alvo zero', async ({ request }) => {
@@ -177,6 +240,93 @@ test.describe('isolamento de metas entre atletas', () => {
       headers: cabecalhoAuth(tokenB),
     })
     expect(aindaExiste.status()).toBe(200)
+  })
+})
+
+test.describe('progresso da meta filtrado por tamanho de piscina', () => {
+  test('treino de 25m nao influencia o progresso de uma meta de 50m', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    // Completa um treino de 25m primeiro (pace bem rapido, sem ele o teste seria falso-positivo).
+    await criarConfigPiscina(request, token, { tamanhoM: 25 })
+    await concluirTreinoComPiscina(request, token, `Treino 25m ${Date.now()}`, 25)
+
+    // Troca a piscina atual do atleta para 50m e cria a ficha/meta de 50m.
+    await request.put(`${API_BASE}/piscina-configuracao/me`, {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 50, formaContagem: 0 },
+    })
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta 50m progresso ${Date.now()}`, 50)
+    const meta = await criarMeta(request, token, {
+      codSerieFicha: idSerie,
+      tituloMeta: 'Meta 50m sem treino compativel',
+      tempoAlvoSeg: 60,
+    })
+    const idMeta = meta.codMeta ?? meta.CodMeta
+
+    const progresso = await request.get(`${API_BASE}/metas/${idMeta}/progresso`, {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(progresso.status()).toBe(200)
+    const body = await progresso.json()
+    expect(body.historicoTentativas ?? body.HistoricoTentativas).toEqual([])
+    expect(body.melhorTempoRealizadoSeg ?? body.MelhorTempoRealizadoSeg).toBeFalsy()
+    expect(body.percentualAtingimento ?? body.PercentualAtingimento).toBe(0)
+  })
+
+  test('treino de 50m nao influencia o progresso de uma meta de 25m', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    // Completa um treino de 50m primeiro.
+    await criarConfigPiscina(request, token, { tamanhoM: 50 })
+    await concluirTreinoComPiscina(request, token, `Treino 50m ${Date.now()}`, 50)
+
+    // Troca a piscina atual do atleta para 25m e cria a ficha/meta de 25m.
+    await request.put(`${API_BASE}/piscina-configuracao/me`, {
+      headers: cabecalhoAuth(token),
+      data: { tamanhoM: 25, formaContagem: 0 },
+    })
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta 25m progresso ${Date.now()}`, 25)
+    const meta = await criarMeta(request, token, {
+      codSerieFicha: idSerie,
+      tituloMeta: 'Meta 25m sem treino compativel',
+      tempoAlvoSeg: 60,
+    })
+    const idMeta = meta.codMeta ?? meta.CodMeta
+
+    const progresso = await request.get(`${API_BASE}/metas/${idMeta}/progresso`, {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(progresso.status()).toBe(200)
+    const body = await progresso.json()
+    expect(body.historicoTentativas ?? body.HistoricoTentativas).toEqual([])
+    expect(body.melhorTempoRealizadoSeg ?? body.MelhorTempoRealizadoSeg).toBeFalsy()
+    expect(body.percentualAtingimento ?? body.PercentualAtingimento).toBe(0)
+  })
+
+  test('treino na mesma piscina da ficha da meta conta no progresso', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    await criarConfigPiscina(request, token, { tamanhoM: 50 })
+    const { idSerie } = await criarFichaComSerie(request, token, `Ficha meta compativel 50m ${Date.now()}`, 50)
+    const meta = await criarMeta(request, token, {
+      codSerieFicha: idSerie,
+      tituloMeta: 'Meta 50m com treino compativel',
+      tempoAlvoSeg: 9999,
+    })
+    const idMeta = meta.codMeta ?? meta.CodMeta
+
+    await concluirTreinoComPiscina(request, token, `Treino compativel 50m ${Date.now()}`, 50)
+
+    const progresso = await request.get(`${API_BASE}/metas/${idMeta}/progresso`, {
+      headers: cabecalhoAuth(token),
+    })
+
+    expect(progresso.status()).toBe(200)
+    const body = await progresso.json()
+    expect((body.historicoTentativas ?? body.HistoricoTentativas).length).toBeGreaterThan(0)
   })
 })
 

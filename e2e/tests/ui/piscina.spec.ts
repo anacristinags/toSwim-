@@ -47,4 +47,27 @@ test.describe('Tela de configuração da piscina', () => {
       page.getByRole('radio', { name: 'Por Numero de Voltas/Piscinas (Ex: 4 voltas, 8 voltas)' }),
     ).toBeChecked()
   })
+
+  test('o cabeçalho reflete o tamanho da piscina imediatamente após salvar, sem reload', async ({
+    page,
+    request,
+  }) => {
+    await autenticarNaPagina(page, request)
+    await page.goto('/piscina')
+
+    const chipPiscina = page.locator('.v-app-bar').getByText(/Piscina: \d+m/)
+
+    await page.getByRole('radio', { name: 'Piscina Curta (25 Metros)' }).check()
+    await page.getByRole('button', { name: 'Salvar Configuracoes' }).click()
+    await expect(page.getByText('Configuracoes da piscina salvas com sucesso!')).toBeVisible()
+    await expect(chipPiscina).toHaveText('Piscina: 25m')
+
+    await page.getByRole('radio', { name: 'Piscina Olimpica (50 Metros)' }).check()
+    await page.getByRole('button', { name: 'Salvar Configuracoes' }).click()
+    await expect(page.getByText('Configuracoes da piscina salvas com sucesso!')).toBeVisible()
+    await expect(chipPiscina).toHaveText('Piscina: 50m')
+
+    await page.reload()
+    await expect(chipPiscina).toHaveText('Piscina: 50m')
+  })
 })

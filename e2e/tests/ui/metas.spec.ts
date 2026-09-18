@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { API_BASE, autenticarNaPagina, cabecalhoAuth } from '../../utils/auth'
-import { criarFichaComSerie, criarMeta } from '../../utils/api'
+import { adicionarSerie, criarFicha, criarFichaComSerie, criarMeta } from '../../utils/api'
 
 test.describe('Tela de metas de tempo', () => {
   test('botão Nova Meta fica desabilitado sem séries de ficha', async ({ page, request }) => {
@@ -20,15 +20,60 @@ test.describe('Tela de metas de tempo', () => {
     await expect(page.getByRole('button', { name: 'Nova Meta' })).toBeEnabled()
 
     await page.getByRole('button', { name: 'Nova Meta' }).click()
-    await expect(page.getByRole('heading', { name: 'Criar Meta de Tempo' })).toBeVisible()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('heading', { name: 'Criar Meta de Tempo' })).toBeVisible()
 
     const titulo = `Meta UI ${Date.now()}`
-    await page.getByLabel('Titulo da Meta').fill(titulo)
-    await page.getByRole('button', { name: 'Criar Meta' }).click()
+    await dialog.getByLabel('Titulo da Meta').fill(titulo)
+    await dialog.getByRole('button', { name: 'Criar Meta' }).click()
+    await expect(dialog).toBeHidden()
 
     await expect(page.getByText('Meta criada com sucesso.')).toBeVisible()
     await expect(page.getByText(titulo)).toBeVisible()
     await expect(page.getByText('Em Andamento')).toBeVisible()
+  })
+
+  test('meta vinculada a série com tipo de nado Livre exibe "Livre"', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    const ficha = await criarFicha(request, atleta.token, `Ficha meta livre UI ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+    await adicionarSerie(request, atleta.token, idFicha, { tipoNado: 4 })
+
+    await page.goto('/metas')
+    await page.getByRole('button', { name: 'Nova Meta' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('heading', { name: 'Criar Meta de Tempo' })).toBeVisible()
+
+    const titulo = `Meta livre UI ${Date.now()}`
+    await dialog.getByLabel('Titulo da Meta').fill(titulo)
+    await dialog.getByRole('button', { name: 'Criar Meta' }).click()
+    await expect(dialog).toBeHidden()
+
+    await expect(page.getByText('Meta criada com sucesso.')).toBeVisible()
+    const card = page.locator('.v-card', { hasText: titulo })
+    await expect(card.getByText(/Livre/)).toBeVisible()
+    await expect(card.getByText('Piscina: 25m')).toBeVisible()
+  })
+
+  test('meta vinculada a ficha de 50m exibe "Piscina: 50m" no card', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    await criarFichaComSerie(request, atleta.token, `Ficha meta piscina 50m UI ${Date.now()}`, 50)
+
+    await page.goto('/metas')
+    await page.getByRole('button', { name: 'Nova Meta' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+
+    const titulo = `Meta piscina 50m UI ${Date.now()}`
+    await dialog.getByLabel('Titulo da Meta').fill(titulo)
+    await dialog.getByRole('button', { name: 'Criar Meta' }).click()
+    await expect(dialog).toBeHidden()
+
+    await expect(page.getByText('Meta criada com sucesso.')).toBeVisible()
+    const card = page.locator('.v-card', { hasText: titulo })
+    await expect(card.getByText('Piscina: 50m')).toBeVisible()
   })
 
   test('filtro por status (aba Ativas/Concluidas) reduz a lista exibida', async ({

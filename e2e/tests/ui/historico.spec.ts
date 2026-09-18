@@ -1,6 +1,13 @@
 import { test, expect, type APIRequestContext } from '@playwright/test'
 import { API_BASE, autenticarNaPagina, cabecalhoAuth } from '../../utils/auth'
-import { concluirTreinoComTempo, criarFichaComSerie, iniciarTreino, seriesDoTreino } from '../../utils/api'
+import {
+  concluirTreinoComPiscina,
+  concluirTreinoComTempo,
+  criarConfigPiscina,
+  criarFichaComSerie,
+  iniciarTreino,
+  seriesDoTreino,
+} from '../../utils/api'
 
 /**
  * Conclui um treino igual a `concluirTreinoComTempo`, mas sem configurar a piscina novamente
@@ -70,10 +77,36 @@ test.describe('Tela de histórico de treinos', () => {
 
     await linha.getByRole('button').filter({ has: page.locator('.mdi-eye-outline') }).click()
 
-    await expect(page.getByText(`Realizado em`)).toBeVisible()
-    await expect(page.getByText('Series Executadas')).toBeVisible()
-    await expect(page.getByText('4x 100m Crawl')).toBeVisible()
-    await page.getByRole('button', { name: 'Fechar' }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText(`Realizado em`)).toBeVisible()
+    await expect(dialog.getByText('Series Executadas')).toBeVisible()
+    await expect(dialog.getByText('4x 100m Crawl')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Fechar' }).click()
+    await expect(dialog).toBeHidden()
+  })
+
+  test('exibe o tamanho da piscina de 50m na listagem e no detalhe do treino', async ({
+    page,
+    request,
+  }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    await criarConfigPiscina(request, atleta.token, { tamanhoM: 50 })
+    const titulo = `Sessao historico piscina 50m ${Date.now()}`
+    await concluirTreinoComPiscina(request, atleta.token, titulo, 50)
+
+    await page.goto('/historico')
+    const linha = page.getByRole('row', { name: titulo })
+    await expect(linha).toBeVisible()
+    await expect(linha.getByText('Piscina: 50m')).toBeVisible()
+
+    await linha.getByRole('button').filter({ has: page.locator('.mdi-eye-outline') }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText('Piscina: 50m')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Fechar' }).click()
+    await expect(dialog).toBeHidden()
   })
 
   test('filtro por titulo reduz a lista exibida', async ({ page, request }) => {

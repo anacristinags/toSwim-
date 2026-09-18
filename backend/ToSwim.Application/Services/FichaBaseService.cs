@@ -38,11 +38,15 @@ public class FichaBaseService : IFichaBaseService
             throw new AppException("Limite de 5 fichas de treino base ativas atingido. Desative ou exclua uma ficha existente.", 400);
         }
 
+        if (dto.TamanhoPiscinaM != 25 && dto.TamanhoPiscinaM != 50)
+            throw new AppException("O tamanho da piscina deve ser 25 ou 50 metros.", 400);
+
         var ficha = new FichaBase
         {
             CodUsuario = codUsuario,
             TituloFicha = dto.TituloFicha.Trim(),
             TipoFicha = dto.TipoFicha,
+            TamanhoPiscinaM = dto.TamanhoPiscinaM,
             Status = 1
         };
 
@@ -111,6 +115,7 @@ public class FichaBaseService : IFichaBaseService
             CodUsuario = codUsuario,
             TituloFicha = $"{fichaOriginal.TituloFicha} (C�pia)",
             TipoFicha = fichaOriginal.TipoFicha,
+            TamanhoPiscinaM = fichaOriginal.TamanhoPiscinaM,
             Status = 1,
             FichaCopiada = fichaOriginal.CodFicha
         };
@@ -157,6 +162,7 @@ public class FichaBaseService : IFichaBaseService
             TituloFicha = f.TituloFicha,
             TipoFicha = f.TipoFicha,
             Status = f.Status,
+            TamanhoPiscinaM = f.TamanhoPiscinaM,
             FichaCopiada = f.FichaCopiada,
             CreatedAt = f.CreatedAt,
             UpdatedAt = f.UpdatedAt,

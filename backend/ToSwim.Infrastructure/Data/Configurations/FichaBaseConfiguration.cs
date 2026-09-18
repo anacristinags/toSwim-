@@ -16,6 +16,7 @@ public class FichaBaseConfiguration : IEntityTypeConfiguration<FichaBase>
         builder.Property(f => f.TituloFicha).HasColumnName("titulo_ficha").HasMaxLength(120).IsRequired();
         builder.Property(f => f.TipoFicha).HasColumnName("tipo_ficha").IsRequired();
         builder.Property(f => f.Status).HasColumnName("status").IsRequired();
+        builder.Property(f => f.TamanhoPiscinaM).HasColumnName("tamanho_piscina_m").IsRequired();
         builder.Property(f => f.FichaCopiada).HasColumnName("ficha_copiada");
         builder.Property(f => f.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(f => f.UpdatedAt).HasColumnName("updated_at").IsRequired();

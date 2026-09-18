@@ -4,10 +4,12 @@ namespace ToSwim.Application.DTOs.FichaBase;
 
 public class FichaBaseRequestDto
 {
-    [Required(ErrorMessage = "O título da ficha é obrigatório")]
-    [MaxLength(120, ErrorMessage = "O título deve ter no máximo 120 caracteres")]
+    [Required(ErrorMessage = "O tï¿½tulo da ficha ï¿½ obrigatï¿½rio")]
+    [MaxLength(120, ErrorMessage = "O tï¿½tulo deve ter no mï¿½ximo 120 caracteres")]
     public string TituloFicha { get; set; } = string.Empty;
 
-    [Range(0, 1, ErrorMessage = "Tipo de ficha inválido (0=Comum, 1=Meta de Tempo)")]
+    [Range(0, 1, ErrorMessage = "Tipo de ficha invï¿½lido (0=Comum, 1=Meta de Tempo)")]
     public short TipoFicha { get; set; } = 0;
+
+    public short TamanhoPiscinaM { get; set; } = 25; // deve ser 25 ou 50
 }

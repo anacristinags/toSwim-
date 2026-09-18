@@ -136,10 +136,16 @@ public class MetricasService : IMetricasService
     {
         var meta = await _context.Metas
             .AsNoTracking()
+            .Include(m => m.SerieFicha!)
+                .ThenInclude(sf => sf.Ficha)
             .FirstOrDefaultAsync(m => m.CodMeta == codMeta && m.CodUsuario == codUsuario);
 
         if (meta == null)
             throw new AppException("Meta nao encontrada.", 404);
+
+        // O progresso so pode considerar treinos feitos na mesma piscina da ficha
+        // vinculada a meta (Meta -> SerieFicha -> FichaBase.TamanhoPiscinaM).
+        var tamanhoPiscinaMeta = meta.SerieFicha?.Ficha?.TamanhoPiscinaM;
 
         var seriesHistorico = await _context.SeriesTreino
             .AsNoTracking()
@@ -147,7 +153,8 @@ public class MetricasService : IMetricasService
             .Where(s => s.Treino != null
                         && s.Treino.CodUsuario == codUsuario
                         && s.Treino.Status == StatusTreino.Concluido
-                        && s.TipoNado == meta.TipoNado)
+                        && s.TipoNado == meta.TipoNado
+                        && s.Treino.TamanhoPiscinaM == tamanhoPiscinaMeta)
             .ToListAsync();
 
         var idsSeries = seriesHistorico.Select(s => s.CodSerieTreino).ToList();

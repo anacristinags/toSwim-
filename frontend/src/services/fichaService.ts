@@ -21,6 +21,7 @@ export interface FichaBaseResponse {
   tituloFicha: string
   tipoFicha: number
   status: number
+  tamanhoPiscinaM: number
   fichaCopiada?: number | null
   createdAt: string
   updatedAt: string
@@ -30,6 +31,7 @@ export interface FichaBaseResponse {
 export interface FichaBasePayload {
   tituloFicha: string
   tipoFicha: number
+  tamanhoPiscinaM: number
 }
 
 export interface SerieFichaPayload {

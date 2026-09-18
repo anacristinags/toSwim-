@@ -49,6 +49,45 @@ test.describe('POST /fichas-base', () => {
     expect(body.codFicha ?? body.CodFicha).toBeTruthy()
   })
 
+  test('cria uma ficha base com tamanho de piscina de 50m', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const titulo = `Treino piscina olimpica ${Date.now()}`
+
+    const response = await request.post('/fichas-base', {
+      headers: cabecalhoAuth(token),
+      data: { tituloFicha: titulo, tipoFicha: 0, tamanhoPiscinaM: 50 },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({ tituloFicha: titulo, tamanhoPiscinaM: 50 })
+  })
+
+  test('usa 25m como padrão quando o tamanho da piscina não é informado', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const titulo = `Treino sem tamanho informado ${Date.now()}`
+
+    const response = await request.post('/fichas-base', {
+      headers: cabecalhoAuth(token),
+      data: { tituloFicha: titulo, tipoFicha: 0 },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({ tamanhoPiscinaM: 25 })
+  })
+
+  test('rejeita tamanho de piscina inválido', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+
+    const response = await request.post('/fichas-base', {
+      headers: cabecalhoAuth(token),
+      data: { tituloFicha: `Ficha piscina invalida ${Date.now()}`, tipoFicha: 0, tamanhoPiscinaM: 33 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
   test('rejeita ficha sem título', async ({ request }) => {
     const { token } = await registrarAtleta(request)
 
@@ -184,6 +223,34 @@ test.describe('séries e duplicação de ficha', () => {
     const copia = await duplicar.json()
     expect(copia.fichaCopiada ?? copia.FichaCopiada).toBe(idFicha)
     expect(copia.tituloFicha ?? copia.TituloFicha).toContain(ficha.tituloFicha ?? ficha.TituloFicha)
+  })
+
+  test('duplicar ficha mantém o tamanho de piscina da ficha original', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha piscina duplicar ${Date.now()}`, 0, 50)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+
+    const duplicar = await request.post(`/fichas-base/${idFicha}/duplicar`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(duplicar.status()).toBe(201)
+    const copia = await duplicar.json()
+    expect(copia.tamanhoPiscinaM ?? copia.TamanhoPiscinaM).toBe(50)
+  })
+
+  test('cria série com tipoNado=4 (Livre)', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha nado livre ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+
+    const response = await request.post(`/fichas-base/${idFicha}/series`, {
+      headers: cabecalhoAuth(token),
+      data: { tipoNado: 4, quantidadeRepeticoes: 4, distanciaM: 100, tempoPausaSeg: 20, isGoalSeries: false },
+    })
+
+    expect(response.status()).toBe(201)
+    const serie = await response.json()
+    expect(serie).toMatchObject({ tipoNado: 4 })
   })
 
   test('exclui ficha sem vínculos e some da listagem', async ({ request }) => {

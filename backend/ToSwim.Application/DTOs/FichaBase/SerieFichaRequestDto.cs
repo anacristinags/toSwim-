@@ -8,7 +8,7 @@ public class SerieFichaRequestDto
     public short? Ordem { get; set; }
 
     [Required(ErrorMessage = "O tipo de nado e obrigatorio")]
-    [Range(0, 3, ErrorMessage = "Tipo de nado invalido (0=Crawl, 1=Costas, 2=Borboleta, 3=Peito)")]
+    [Range(0, 4, ErrorMessage = "Tipo de nado invalido (0=Crawl, 1=Costas, 2=Borboleta, 3=Peito, 4=Livre)")]
     public short TipoNado { get; set; }
 
     [Required(ErrorMessage = "A quantidade de repeticoes e obrigatoria")]

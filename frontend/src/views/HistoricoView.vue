@@ -68,6 +68,7 @@
               <th class="text-left font-weight-bold">Data</th>
               <th class="text-left font-weight-bold">Treino</th>
               <th class="text-center font-weight-bold">Distancia Total</th>
+              <th class="text-center font-weight-bold">Piscina</th>
               <th class="text-center font-weight-bold">Tempo Total</th>
               <th class="text-center font-weight-bold">Pace Medio</th>
               <th class="text-right font-weight-bold">Acoes</th>
@@ -85,6 +86,11 @@
               <td class="text-center">
                 <v-chip size="small" color="info" variant="tonal">
                   {{ item.distanciaTotalM }}m
+                </v-chip>
+              </td>
+              <td class="text-center">
+                <v-chip size="small" color="secondary" variant="tonal">
+                  Piscina: {{ item.tamanhoPiscinaM }}m
                 </v-chip>
               </td>
               <td class="text-center font-weight-medium">
@@ -118,6 +124,7 @@
         </v-card-title>
         <v-card-subtitle class="px-0 mb-4">
           Realizado em {{ formatarData(treinoSelecionado.dataTreino) }}
+          &nbsp;|&nbsp; Piscina: {{ treinoSelecionado.tamanhoPiscinaM }}m
         </v-card-subtitle>
 
         <v-alert

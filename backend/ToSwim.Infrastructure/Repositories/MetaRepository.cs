@@ -21,14 +21,16 @@ public class MetaRepository : IMetaRepository
     public async Task<Meta?> ObterPorIdAsync(int codMeta, int codUsuario)
     {
         return await _context.Metas
-            .Include(m => m.SerieFicha)
+            .Include(m => m.SerieFicha!)
+                .ThenInclude(sf => sf.Ficha)
             .FirstOrDefaultAsync(m => m.CodMeta == codMeta && m.CodUsuario == codUsuario);
     }
 
     public async Task<IEnumerable<Meta>> ObterTodasPorUsuarioAsync(int codUsuario, StatusMeta? status)
     {
         var query = _context.Metas
-            .Include(m => m.SerieFicha)
+            .Include(m => m.SerieFicha!)
+                .ThenInclude(sf => sf.Ficha)
             .AsNoTracking()
             .Where(m => m.CodUsuario == codUsuario);
 

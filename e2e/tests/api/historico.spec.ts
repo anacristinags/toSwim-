@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
-import { concluirTreinoComTempo, criarFichaComSerie, iniciarTreino } from '../../utils/api'
+import {
+  concluirTreinoComPiscina,
+  concluirTreinoComTempo,
+  criarConfigPiscina,
+  criarFichaComSerie,
+  iniciarTreino,
+} from '../../utils/api'
 
 test.describe('GET /historico/treinos', () => {
   test('retorna 401 sem token de autenticação', async ({ request }) => {
@@ -34,7 +40,12 @@ test.describe('GET /historico/treinos', () => {
     const itens = await lista.json()
     expect(itens).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ tituloTreino: titulo, status: 1, distanciaTotalM: 100 }),
+        expect.objectContaining({
+          tituloTreino: titulo,
+          status: 1,
+          distanciaTotalM: 100,
+          tamanhoPiscinaM: 25,
+        }),
       ]),
     )
 
@@ -42,7 +53,7 @@ test.describe('GET /historico/treinos', () => {
       headers: cabecalhoAuth(token),
     })
     expect(detalhe.status()).toBe(200)
-    expect(await detalhe.json()).toMatchObject({ tituloTreino: titulo, status: 1 })
+    expect(await detalhe.json()).toMatchObject({ tituloTreino: titulo, status: 1, tamanhoPiscinaM: 25 })
 
     const { idFicha } = await criarFichaComSerie(request, token, `Ficha andamento ${Date.now()}`)
     const emAndamento = await iniciarTreino(request, token, {
@@ -55,6 +66,26 @@ test.describe('GET /historico/treinos', () => {
       headers: cabecalhoAuth(token),
     })
     expect(detalheAndamento.status()).toBe(400)
+  })
+
+  test('lista e detalhe refletem o tamanho da piscina de 50m do treino', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token, { tamanhoM: 50 })
+    const titulo = `Treino historico 50m ${Date.now()}`
+    const finalizado = await concluirTreinoComPiscina(request, token, titulo, 50)
+    const idFinalizado = finalizado.codTreino ?? finalizado.CodTreino
+
+    const lista = await request.get('/historico/treinos', {
+      headers: cabecalhoAuth(token),
+    })
+    expect(await lista.json()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ tituloTreino: titulo, tamanhoPiscinaM: 50 })]),
+    )
+
+    const detalhe = await request.get(`/historico/treinos/${idFinalizado}`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(await detalhe.json()).toMatchObject({ tamanhoPiscinaM: 50 })
   })
 
   test('atleta A nao acessa historico/detalhe de treino do atleta B (isolamento)', async ({

@@ -71,24 +71,21 @@
 
 <script setup lang="ts">
     import { ref, onMounted } from 'vue'
-    import piscinaService from '@/services/piscinaService'
+    import { usePiscinaStore } from '@/stores/piscina'
     import { extrairMensagemErro } from '@/services/erros'
+
+    const piscinaStore = usePiscinaStore()
 
     const tamanhoPiscinaM = ref<number>(25)
     const formaContagem = ref<number>(0)
     const carregando = ref(false)
-    const possuiConfiguracao = ref(false)
     const mensagem = ref<{ tipo: 'success' | 'error'; texto: string } | null>(null)
 
     onMounted(async () => {
         try {
-            const config = await piscinaService.obterConfiguracao()
-
-            if (config) {
-                tamanhoPiscinaM.value = config.tamanhoM
-                formaContagem.value = config.formaContagem
-                possuiConfiguracao.value = true
-            }
+            await piscinaStore.carregar()
+            tamanhoPiscinaM.value = piscinaStore.tamanhoM
+            formaContagem.value = piscinaStore.formaContagem
         } catch (error) {
             mensagem.value = {
                 tipo: 'error',
@@ -107,12 +104,7 @@
         }
 
         try {
-            if (possuiConfiguracao.value) {
-                await piscinaService.atualizarConfiguracao(dados)
-            } else {
-                await piscinaService.criarConfiguracao(dados)
-                possuiConfiguracao.value = true
-            }
+            await piscinaStore.salvar(dados)
 
             mensagem.value = { tipo: 'success', texto: 'Configuracoes da piscina salvas com sucesso!' }
         } catch (error) {

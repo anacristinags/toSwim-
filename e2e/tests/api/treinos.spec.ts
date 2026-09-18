@@ -43,6 +43,30 @@ test.describe('POST /treinos', () => {
     expect(seriesDoTreino(body)).toHaveLength(1)
   })
 
+  test('ignora tamanhoPiscinaM forçado pelo cliente e persiste o valor da ficha/config', async ({
+    request,
+  }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token, { tamanhoM: 25 })
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha autoridade piscina ${Date.now()}`, 25)
+
+    // Contrato: o backend nunca confia em dto.TamanhoPiscinaM. O cliente tenta forcar 50m
+    // mas a ficha/config atual do atleta sao 25m, entao o treino criado deve ser salvo com 25m
+    // (o campo enviado no payload e silenciosamente ignorado, nao gera erro).
+    const response = await request.post('/treinos', {
+      headers: cabecalhoAuth(token),
+      data: {
+        codFicha: idFicha,
+        tituloTreino: 'Tentativa de forcar piscina',
+        tamanhoPiscinaM: 50,
+      },
+    })
+
+    expect(response.status()).toBe(201)
+    const body = await response.json()
+    expect(body).toMatchObject({ tamanhoPiscinaM: 25 })
+  })
+
   test('rejeita tamanho de piscina inválido ao iniciar', async ({ request }) => {
     const { token } = await registrarAtleta(request)
     const ficha = await criarFicha(request, token, `Ficha piscina inválida ${Date.now()}`)
@@ -54,6 +78,35 @@ test.describe('POST /treinos', () => {
     })
 
     expect(response.status()).toBe(400)
+  })
+
+  test('rejeita iniciar treino sem configuração de piscina do atleta', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha sem config piscina ${Date.now()}`)
+
+    const response = await request.post('/treinos', {
+      headers: cabecalhoAuth(token),
+      data: { codFicha: idFicha, tituloTreino: 'Sem config', tamanhoPiscinaM: 25 },
+    })
+
+    expect(response.status()).toBe(400)
+  })
+
+  test('rejeita iniciar treino quando a ficha é de 25m mas a piscina atual está configurada para 50m', async ({
+    request,
+  }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token, { tamanhoM: 50 })
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha 25m ${Date.now()}`, 25)
+
+    const response = await request.post('/treinos', {
+      headers: cabecalhoAuth(token),
+      data: { codFicha: idFicha, tituloTreino: 'Ficha incompatível', tamanhoPiscinaM: 25 },
+    })
+
+    expect(response.status()).toBe(400)
+    const body = await response.json()
+    expect(body.erro ?? body.Erro ?? JSON.stringify(body)).toMatch(/25m/)
   })
 
   test('rejeita iniciar treino a partir de ficha sem nenhuma serie', async ({ request }) => {

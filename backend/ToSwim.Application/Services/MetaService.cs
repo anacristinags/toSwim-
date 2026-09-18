@@ -31,7 +31,7 @@ public class MetaService : IMetaService
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta nùo encontrada ou nùo pertence a este usuùrio.", 404);
+            throw new AppException("Meta nÔøΩo encontrada ou nÔøΩo pertence a este usuÔøΩrio.", 404);
 
         return MapearParaDto(meta);
     }
@@ -47,18 +47,18 @@ public class MetaService : IMetaService
         // 1. Validar se a serie_ficha existe
         var serie = await _serieFichaRepository.BuscarPorIdAsync(dto.CodSerieFicha);
         if (serie == null)
-            throw new AppException("A sùrie de ficha informada nùo existe.", 404);
+            throw new AppException("A sÔøΩrie de ficha informada nÔøΩo existe.", 404);
 
         var fichaDona = await _fichaBaseRepository.BuscarPorIdAsync(serie.CodFicha, codUsuario);
         if (fichaDona == null)
-            throw new AppException("A sùrie de ficha informada nùo pertence ao usuùrio autenticado.", 403);
+            throw new AppException("A sÔøΩrie de ficha informada nÔøΩo pertence ao usuÔøΩrio autenticado.", 403);
 
         var existeMetaAtiva = await _metaRepository.ExisteMetaAtivaParaSerieAsync(codUsuario, dto.CodSerieFicha);
         if (existeMetaAtiva)
-            throw new AppException("Jù existe uma meta ativa associada a esta sùrie de treino.", 400);
+            throw new AppException("JÔøΩ existe uma meta ativa associada a esta sÔøΩrie de treino.", 400);
 
         if (dto.DistanciaAlvoM <= 0)
-            throw new AppException("A distùncia alvo deve ser maior que zero.", 400);
+            throw new AppException("A distÔøΩncia alvo deve ser maior que zero.", 400);
         if (dto.TempoAlvoSeg <= 0)
             throw new AppException("O tempo alvo deve ser maior que zero.", 400);
 
@@ -77,7 +77,8 @@ public class MetaService : IMetaService
             Status = StatusMeta.Ativa,
             DataInicio = dto.DataInicio.ToUniversalTime(),
             DataFimPrevista = dto.DataFimPrevista?.ToUniversalTime(),
-            Observacoes = dto.Observacoes
+            Observacoes = dto.Observacoes,
+            SerieFicha = serie
         };
 
         await _metaRepository.AdicionarAsync(novaMeta);
@@ -90,13 +91,13 @@ public class MetaService : IMetaService
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta nùo encontrada.", 404);
+            throw new AppException("Meta nÔøΩo encontrada.", 404);
 
         if (meta.Status != StatusMeta.Ativa)
             throw new AppException("Apenas metas ativas podem ser editadas.", 400);
 
         if (dto.DistanciaAlvoM <= 0 || dto.TempoAlvoSeg <= 0)
-            throw new AppException("Distùncia e tempo alvo devem ser maiores que zero.", 400);
+            throw new AppException("DistÔøΩncia e tempo alvo devem ser maiores que zero.", 400);
 
         // Atualizar dados e recalcular o Pace Alvo
         meta.TituloMeta = dto.TituloMeta;
@@ -119,7 +120,7 @@ public class MetaService : IMetaService
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta nùo encontrada.", 404);
+            throw new AppException("Meta nÔøΩo encontrada.", 404);
 
         meta.Status = novoStatus;
 
@@ -133,7 +134,7 @@ public class MetaService : IMetaService
     {
         var meta = await _metaRepository.ObterPorIdAsync(codMeta, codUsuario);
         if (meta == null)
-            throw new AppException("Meta nùo encontrada.", 404);
+            throw new AppException("Meta nÔøΩo encontrada.", 404);
 
         _metaRepository.Remover(meta);
         await _metaRepository.SalvarAlteracoesAsync();
@@ -152,6 +153,7 @@ public class MetaService : IMetaService
             CodMeta = meta.CodMeta,
             CodUsuario = meta.CodUsuario,
             CodSerieFicha = meta.CodSerieFicha,
+            TamanhoPiscinaM = meta.SerieFicha?.Ficha?.TamanhoPiscinaM ?? 25,
             TituloMeta = meta.TituloMeta,
             TipoNado = meta.TipoNado,
             DistanciaAlvoM = meta.DistanciaAlvoM,

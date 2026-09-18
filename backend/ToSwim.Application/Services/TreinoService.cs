@@ -17,17 +17,20 @@ public class TreinoService : ITreinoService
     private readonly ITreinoRepository _treinoRepository;
     private readonly ISerieTreinoRepository _serieTreinoRepository;
     private readonly IFichaBaseRepository _fichaBaseRepository;
+    private readonly IConfigPiscinaRepository _configPiscinaRepository;
     private readonly IMetricasService _metricasService;
 
     public TreinoService(
         ITreinoRepository treinoRepository,
         ISerieTreinoRepository serieTreinoRepository,
         IFichaBaseRepository fichaBaseRepository,
+        IConfigPiscinaRepository configPiscinaRepository,
         IMetricasService metricasService)
     {
         _treinoRepository = treinoRepository;
         _serieTreinoRepository = serieTreinoRepository;
         _fichaBaseRepository = fichaBaseRepository;
+        _configPiscinaRepository = configPiscinaRepository;
         _metricasService = metricasService;
     }
 
@@ -41,17 +44,24 @@ public class TreinoService : ITreinoService
         if (!ficha.Series.Any())
             throw new AppException("A ficha deve possuir pelo menos uma s?rie.", 400);
 
-        if (dto.TamanhoPiscinaM != 25 && dto.TamanhoPiscinaM != 50)
-            throw new AppException("O tamanho da piscina deve ser 25 ou 50 metros.", 400);
+        var configPiscina = await _configPiscinaRepository.BuscarPorUsuarioAsync(codUsuario);
+        if (configPiscina == null)
+            throw new AppException("Configure o tamanho da sua piscina antes de iniciar um treino.", 400);
+
+        if (ficha.TamanhoPiscinaM != configPiscina.TamanhoM)
+            throw new AppException($"Esta ficha e para piscina de {ficha.TamanhoPiscinaM}m, mas sua piscina esta configurada para {configPiscina.TamanhoM}m.", 400);
 
         // 2. Instanciar o Treino
+        // O tamanho da piscina do treino NUNCA vem do cliente (dto.TamanhoPiscinaM e ignorado):
+        // e sempre derivado de ficha.TamanhoPiscinaM, ja validado acima contra a configuracao
+        // atual do atleta. Isso impede que o cliente force um tamanho diferente no payload.
         var novoTreino = new Treino
         {
             CodUsuario = codUsuario,
             CodFicha = dto.CodFicha,
             TituloTreino = string.IsNullOrWhiteSpace(dto.TituloTreino) ? ficha.TituloFicha : dto.TituloTreino.Trim(),
             Observacao = string.IsNullOrWhiteSpace(dto.Observacao) ? null : dto.Observacao.Trim(),
-            TamanhoPiscinaM = dto.TamanhoPiscinaM,
+            TamanhoPiscinaM = ficha.TamanhoPiscinaM,
             Status = StatusTreino.Andamento,
             DataTreino = DateTime.UtcNow
         };
@@ -111,12 +121,10 @@ public class TreinoService : ITreinoService
         if (treino.Status != StatusTreino.Andamento)
             throw new AppException("Apenas treinos em andamento podem ser atualizados.", 400);
 
-        if (dto.TamanhoPiscinaM != 25 && dto.TamanhoPiscinaM != 50)
-            throw new AppException("O tamanho da piscina deve ser 25 ou 50 metros.", 400);
-
+        // dto.TamanhoPiscinaM e ignorado: o tamanho da piscina e fixado na criacao do
+        // treino (a partir da ficha) e nao pode ser alterado depois.
         treino.TituloTreino = string.IsNullOrWhiteSpace(dto.TituloTreino) ? treino.TituloTreino : dto.TituloTreino.Trim();
         treino.Observacao = string.IsNullOrWhiteSpace(dto.Observacao) ? null : dto.Observacao.Trim();
-        treino.TamanhoPiscinaM = dto.TamanhoPiscinaM;
 
         _treinoRepository.Atualizar(treino);
         await _treinoRepository.SalvarAlteracoesAsync();

@@ -4,6 +4,7 @@ export interface MetaResponse {
   codMeta: number
   codUsuario: number
   codSerieFicha: number
+  tamanhoPiscinaM: number
   tituloMeta: string
   tipoNado: number
   distanciaAlvoM: number

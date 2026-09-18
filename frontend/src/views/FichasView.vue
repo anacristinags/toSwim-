@@ -53,7 +53,12 @@
               <v-icon icon="mdi-swim" color="primary" class="mr-2"></v-icon>
             </template>
             <v-card-title class="font-weight-bold">{{ ficha.tituloFicha }}</v-card-title>
-            <v-card-subtitle>{{ seriesDaFicha(ficha).length }} series cadastradas</v-card-subtitle>
+            <v-card-subtitle>
+              {{ seriesDaFicha(ficha).length }} series cadastradas
+              <v-chip size="small" color="primary" variant="tonal" class="ml-2">
+                Piscina: {{ ficha.tamanhoPiscinaM }}m
+              </v-chip>
+            </v-card-subtitle>
 
             <template v-slot:append>
               <v-btn
@@ -146,8 +151,18 @@
             label="Titulo da Ficha (Ex: Treino de Velocidade 1500m)"
             variant="outlined"
             density="comfortable"
-            class="mt-2"
+            class="mt-2 mb-3"
           ></v-text-field>
+
+          <v-select
+            v-model="novaFichaTamanhoPiscina"
+            label="Tamanho da Piscina"
+            :items="[{ title: '25 metros', value: 25 }, { title: '50 metros', value: 50 }]"
+            item-title="title"
+            item-value="value"
+            variant="outlined"
+            density="comfortable"
+          ></v-select>
         </v-card-text>
         <v-card-actions class="justify-end">
           <v-btn variant="text" @click="dialogNovaFicha = false">Cancelar</v-btn>
@@ -234,6 +249,9 @@ import fichaService, {
 } from '@/services/fichaService'
 import { extrairMensagemErro } from '@/services/erros'
 import { TIPOS_NADO, nomeNado } from '@/services/formatacao'
+import { usePiscinaStore } from '@/stores/piscina'
+
+const piscinaStore = usePiscinaStore()
 
 const fichas = ref<FichaBaseResponse[]>([])
 const carregando = ref(false)
@@ -242,6 +260,7 @@ const mensagem = ref<{ tipo: 'success' | 'error' | 'info'; texto: string } | nul
 
 const dialogNovaFicha = ref(false)
 const novaFichaTitulo = ref('')
+const novaFichaTamanhoPiscina = ref(25)
 
 const dialogNovaSerie = ref(false)
 const fichaSelecionadaId = ref<number | null>(null)
@@ -275,13 +294,22 @@ const carregarFichas = async (silencioso = false) => {
   }
 }
 
-const abrirNovaFicha = () => {
+const abrirNovaFicha = async () => {
   novaFichaTitulo.value = ''
+  if (!piscinaStore.carregado) {
+    try {
+      await piscinaStore.carregar()
+    } catch {
+      // mantem o default de 25m caso a config nao possa ser carregada
+    }
+  }
+  novaFichaTamanhoPiscina.value = piscinaStore.tamanhoM
   dialogNovaFicha.value = true
 }
 
 const salvarNovaFicha = async () => {
   if (!novaFichaTitulo.value.trim()) return
+  if (novaFichaTamanhoPiscina.value !== 25 && novaFichaTamanhoPiscina.value !== 50) return
 
   salvando.value = true
   mensagem.value = null
@@ -289,7 +317,8 @@ const salvarNovaFicha = async () => {
   try {
     await fichaService.criar({
       tituloFicha: novaFichaTitulo.value.trim(),
-      tipoFicha: 0
+      tipoFicha: 0,
+      tamanhoPiscinaM: novaFichaTamanhoPiscina.value
     })
     dialogNovaFicha.value = false
     await carregarFichas()

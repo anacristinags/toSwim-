@@ -57,9 +57,14 @@
               </v-chip>
               <h2 class="text-h6 font-weight-bold">{{ meta.tituloMeta }}</h2>
             </div>
-            <v-chip variant="outlined" color="info">
-              {{ nomeNado(meta.tipoNado) }} - {{ meta.distanciaAlvoM }}m
-            </v-chip>
+            <div class="d-flex flex-column align-end ga-1">
+              <v-chip variant="outlined" color="info">
+                {{ nomeNado(meta.tipoNado) }} - {{ meta.distanciaAlvoM }}m
+              </v-chip>
+              <v-chip variant="outlined" color="secondary" size="small">
+                Piscina: {{ meta.tamanhoPiscinaM }}m
+              </v-chip>
+            </div>
           </div>
 
           <v-divider class="my-4"></v-divider>

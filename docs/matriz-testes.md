@@ -47,10 +47,17 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | FICHA-010 | Fichas | Atleta A não acessa ficha do atleta B (`GET /fichas-base/{id}`) | API | Duas contas, ficha do B | id da ficha do B, token do A | 404 (isolado por `codUsuario` na query) | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
 | FICHA-011 | Fichas | Atleta A não exclui ficha do atleta B | API | Duas contas, ficha do B | DELETE com token do A | 404 | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
 | FICHA-012 | Fichas | Atleta A não adiciona série na ficha do atleta B | API | Duas contas, ficha do B | POST série, token do A | 404 | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
+| FICHA-013 | Fichas | Cria ficha com tamanho de piscina 50m | API | Atleta autenticado | tamanhoPiscinaM=50 | 201, `tamanhoPiscinaM=50` | Alta | Automatizado | `fichas.spec.ts:52` |
+| FICHA-014 | Fichas | Usa 25m como padrão quando o tamanho da piscina não é informado | API | Atleta autenticado | sem `tamanhoPiscinaM` no payload | 201, `tamanhoPiscinaM=25` | Alta | Automatizado | `fichas.spec.ts:66` |
+| FICHA-015 | Fichas | Rejeita tamanho de piscina inválido na ficha (não 25/50) | API | Atleta autenticado | tamanhoPiscinaM=33 | 400 (`FichaBaseService.CriarAsync`) | Alta | Automatizado | `fichas.spec.ts:80` |
+| FICHA-016 | Fichas | Duplicar ficha mantém o tamanho de piscina da ficha original | API | Ficha de 50m | POST `/duplicar` | 201, cópia com `tamanhoPiscinaM=50` | Alta | Automatizado | `fichas.spec.ts:228` |
+| FICHA-017 | Fichas UI | Cria ficha selecionando piscina de 50m e exibe "Piscina: 50m" no card | UI | Atleta autenticado | seleciona "50 metros" no diálogo | Chip "Piscina: 50m" visível no card criado | Alta | Automatizado | `fichas.spec.ts:51` (UI) |
+| SERIE-009 | Séries | Cria série com tipoNado=4 (Livre) | API | Ficha criada | tipoNado=4 | 201, `tipoNado=4` | Alta | Automatizado | `fichas.spec.ts:241` |
+| SERIE-010 | Séries UI | Seleciona tipo de nado "Livre" ao cadastrar série e exibe na ficha | UI | Ficha criada | seleciona "Livre" no diálogo | "4x 100m - Livre" visível na ficha | Alta | Automatizado | `fichas.spec.ts:78` (UI) |
 | SERIE-001 | Séries | Rejeita distância zero | API | Ficha criada | distanciaM=0 | 400 (`[Range(1,10000)]`) | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
 | SERIE-002 | Séries | Rejeita distância negativa | API | Ficha criada | distanciaM=-10 | 400 (`[Range(1,10000)]`) | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
 | SERIE-003 | Séries | Rejeita distância acima do limite máximo (10000) | API | Ficha criada | distanciaM=10001 | 400 (`[Range(1,10000)]`) | Média | **Implementado nesta análise** | `fichas.spec.ts` |
-| SERIE-004 | Séries | Rejeita tipoNado fora do enum válido (0-3) | API | Ficha criada | tipoNado=99 | 400 (`[Range(0,3)]`) | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
+| SERIE-004 | Séries | Rejeita tipoNado fora do enum válido (0-4, incluindo o novo tipo 4=Livre) | API | Ficha criada | tipoNado=99 | 400 (`[Range(0,4)]`) | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
 | SERIE-005 | Séries | Rejeita quantidadeRepeticoes zero/negativa | API | Ficha criada | quantidadeRepeticoes=0 | 400 (`[Range(1,1000)]`) | Média | **Implementado nesta análise** | `fichas.spec.ts` |
 | SERIE-006 | Séries | Rejeita tempoPausaSeg negativo | API | Ficha criada | tempoPausaSeg=-1 | 400 (`[Range(0,3600)]`) | Média | Pendente | — |
 | SERIE-007 | Séries | Atleta A não atualiza série do atleta B | API | Duas contas, série do B | PUT série do B, token do A | 404 (`serie.Ficha?.CodUsuario != codUsuario`) | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
@@ -72,6 +79,14 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | META-010 | Metas | **Isolamento:** atleta A não exclui meta do atleta B | API | Meta do atleta B | DELETE, token do A | 404 | Alta | **Implementado nesta análise** | `metas.spec.ts` |
 | META-011 | Metas | Rejeita criação de meta com série inexistente | API | codSerieFicha inválido | codSerieFicha=999999 | 404 (`"A série de ficha informada não existe."`) | Média | Pendente | — |
 | META-012 | Metas UI | Filtro de status (Todas/Ativas/Concluídas) reflete a lista exibida | UI | Metas ativa e concluída existentes | clicar nas abas | Lista muda conforme aba selecionada | Alta | **Implementado nesta análise** | `metas.spec.ts` (UI) |
+| META-013 | Metas | Cria meta com tipoNado=4 (Livre) | API | Ficha+série do atleta | tipoNado=4 | 201, `tipoNado=4` | Alta | Automatizado | `metas.spec.ts:53` |
+| META-014 | Metas | Meta vinculada a ficha de 25m retorna `tamanhoPiscinaM=25` (derivado via `Meta -> SerieFicha -> FichaBase`, sem coluna nova em `meta`) | API | Ficha de 25m com série | dados válidos | 201, `tamanhoPiscinaM=25` | Alta | **Implementado nesta análise** | `metas.spec.ts:74` |
+| META-015 | Metas | Meta vinculada a ficha de 50m retorna `tamanhoPiscinaM=50` | API | Ficha de 50m com série | dados válidos | 201, `tamanhoPiscinaM=50` | Alta | **Implementado nesta análise** | `metas.spec.ts:88` |
+| META-016 | Metas UI | Meta vinculada a série com tipo de nado Livre exibe "Livre" e "Piscina: 25m" no card | UI | Série tipoNado=4, ficha 25m | criar meta | Chips "Livre" e "Piscina: 25m" visíveis | Alta | Automatizado | `metas.spec.ts:37` (UI) |
+| META-017 | Metas UI | Meta vinculada a ficha de 50m exibe "Piscina: 50m" no card | UI | Ficha de 50m com série | criar meta | Chip "Piscina: 50m" visível | Alta | **Implementado nesta análise** | `metas.spec.ts:60` (UI) |
+| METR-006 | Métricas | Progresso da meta: treino de 25m NÃO influencia meta vinculada a ficha de 50m (`MetricasService.ObterProgressoMetaAsync` filtra `s.Treino.TamanhoPiscinaM == tamanhoPiscinaMeta`) | API | Treino 25m concluído + meta em ficha 50m, mesmo tipoNado | GET `/metas/{id}/progresso` | `historicoTentativas=[]`, `percentualAtingimento=0` | Alta | **Implementado nesta análise** | `metas.spec.ts:233` |
+| METR-007 | Métricas | Progresso da meta: treino de 50m NÃO influencia meta vinculada a ficha de 25m | API | Treino 50m concluído + meta em ficha 25m, mesmo tipoNado | GET `/metas/{id}/progresso` | `historicoTentativas=[]`, `percentualAtingimento=0` | Alta | **Implementado nesta análise** | `metas.spec.ts:264` |
+| METR-008 | Métricas | Progresso da meta: treino na mesma piscina da ficha da meta conta normalmente (fórmula de pace inalterada) | API | Treino 50m concluído + meta em ficha 50m, mesmo tipoNado | GET `/metas/{id}/progresso` | `historicoTentativas` com pelo menos 1 item | Alta | **Implementado nesta análise** | `metas.spec.ts:295` |
 
 ## 4. Configuração de Piscina (`/piscina-configuracao`)
 
@@ -105,6 +120,9 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | TREINO-013 | Treinos | **Isolamento:** atleta A não acessa/edita treino do atleta B | API | Treino do atleta B | GET/PUT com token do A | 404 (`TreinoRepository.ObterPorIdAsync` filtra por `codUsuario`) | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
 | TREINO-014 | Treinos | Rejeita iniciar treino a partir de ficha inativa (status=0) | API | Ficha desativada | codFicha inativo | 404 (`ficha.Status != 1`) | Média | Pendente | — |
 | TREINO-015 | Treinos UI | Iniciar treino sem piscina configurada mantém botão desabilitado (fluxo já coberto) | UI | Sem config de piscina | — | Botão "Iniciar Treino na Piscina" desabilitado | Alta | Automatizado | `treinos.spec.ts:6` (UI) |
+| TREINO-016 | Treinos | Rejeita iniciar treino quando a piscina da ficha diverge da configuração atual do atleta | API | Ficha 25m, config do atleta em 50m | POST `/treinos` | 400, mensagem citando os dois tamanhos | Alta | Automatizado | `treinos.spec.ts:95` |
+| TREINO-017 | Treinos | Rejeita iniciar treino sem o atleta ter configurado a piscina | API | Ficha com série, sem `ConfigPiscina` | POST `/treinos` | 400, `"Configure o tamanho da sua piscina..."` | Alta | Automatizado | `treinos.spec.ts:83` |
+| TREINO-018 | Treinos | **Autoridade do backend:** `dto.TamanhoPiscinaM` enviado pelo cliente é ignorado; o treino criado sempre recebe `FichaBase.TamanhoPiscinaM` (já validado contra a config do atleta) — o cliente não consegue forçar outro valor no payload | API | Config=25m, ficha=25m | payload com `tamanhoPiscinaM=50` | 201, treino persistido com `tamanhoPiscinaM=25` (valor do cliente é descartado, não gera erro — contrato documentado em `IniciarTreinoRequestDto.cs` e `TreinoService.IniciarTreinoAsync`) | Alta | **Implementado nesta análise** | `treinos.spec.ts:46` |
 
 ## 6. Histórico (`/historico/treinos`)
 
@@ -115,6 +133,8 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | HIST-003 | Histórico | Lista treino concluído e rejeita detalhe de treino em andamento | API | 1 treino concluído + 1 em andamento | — | 200 lista; 400 no detalhe do treino em andamento | Alta | Automatizado | `historico.spec.ts:22` |
 | HIST-004 | Histórico | **Isolamento:** atleta A não acessa histórico/detalhe de treino do atleta B | API | Treino concluído do atleta B | GET detalhe, token do A | 404 (`TreinoService.ObterPorIdAsync` filtra por `codUsuario`) | Alta | **Implementado nesta análise** | `historico.spec.ts` |
 | HIST-005 | Histórico UI | Filtro por título e por data reduz a lista exibida | UI | 2 treinos concluídos com títulos distintos | preencher filtro de título | Apenas linha correspondente permanece visível | Alta | **Implementado nesta análise** | `historico.spec.ts` (UI) |
+| HIST-006 | Histórico | Lista e detalhe refletem `tamanhoPiscinaM=50` de um treino concluído (campo já existia em `Treino`/`TreinoResponseDto`; nenhuma coluna nova foi criada) | API | Treino de 50m concluído | — | 200; lista e detalhe com `tamanhoPiscinaM=50` | Alta | **Implementado nesta análise** | `historico.spec.ts:70` |
+| HIST-007 | Histórico UI | Listagem e detalhe do treino exibem "Piscina: 50m" | UI | Treino de 50m concluído | abrir `/historico` e o detalhe | Chip "Piscina: 50m" visível na linha da tabela e no diálogo de detalhe | Alta | **Implementado nesta análise** | `historico.spec.ts:88` (UI) |
 
 ## 7. Métricas (`/dashboard/resumo`, `/metricas/*`)
 
@@ -157,19 +177,36 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 
 ## Resumo de cobertura
 
-| Camada | Automatizados (antes) | Implementados nesta análise | Pendentes (baixo risco, não implementados) |
-|--------|------------------------|-------------------------------|----------------------------------------------|
-| API    | 39                      | 28                             | 6 (AUTH-008, AUTH-010, SERIE-006, META-011, TREINO-014, METR-005, USER-003) |
-| UI     | 17                      | 5                               | 0 adicionais mapeados nesta rodada |
-| **Total** | **56**              | **33**                         | **7** |
+| Camada | Automatizados (baseline anterior) | Implementados nesta análise | Implementados na rodada de piscina/metas/histórico | Pendentes (baixo risco) |
+|--------|-------------------------------------|-------------------------------|--------------------------------------------------------|---------------------------|
+| API    | 39                                   | 28                             | 14 (FICHA-013..016, SERIE-009, META-013..015, METR-006..008, TREINO-016..018, HIST-006) | 6 (AUTH-008, AUTH-010, SERIE-006, META-011, TREINO-014, METR-005, USER-003) |
+| UI     | 17                                   | 5                               | 4 (FICHA-017, SERIE-010, META-016..017, HIST-007)      | 0 adicionais mapeados nesta rodada |
+| **Total** | **56**                           | **33**                         | **18**                                                  | **7** |
 
-> Contagem real de testes após a implementação (`grep -c "test("`): **67 testes de API** e
-> **22 testes de UI** = **89 testes no total**, todos passando.
+> Contagem real de testes (`npx playwright test --list` / execução completa): **82 testes de API**
+> e **28 testes de UI** = **110 testes no total**, todos passando — inclusive em **execução
+> paralela** (`npx playwright test`, 4 workers, ~1m30s), que é o modo padrão usado em CI.
 
 > Os pendentes remanescentes são cenários de prioridade média/baixa (limites de tamanho de string,
-> mensagens de erro específicas para IDs inexistentes) que não estavam entre os quatro focos de
-> risco solicitados (isolamento, borda, estados inválidos de treino, UI não coberta). Ficam
-> registrados aqui para priorização futura.
+> mensagens de erro específicas para IDs inexistentes) que não estavam entre os focos de risco
+> solicitados. Ficam registrados aqui para priorização futura.
+
+### Estabilidade da suíte em paralelo
+
+O `e2e/tests/ui/fichas.spec.ts:16` falhava de forma intermitente quando a suíte completa rodava em
+paralelo (`fullyParallel: true`). A causa raiz não era o teste em si: o `playwright.config.ts`
+subia o frontend com `vite dev` (`npm run dev`), que compila cada rota **sob demanda** na primeira
+requisição (todas as rotas são `() => import(...)` lazy no router). Com vários workers acessando
+rotas diferentes pela primeira vez ao mesmo tempo, esse cold-compile no único dev server
+compartilhado podia estourar o timeout padrão de asserção do Playwright.
+
+**Correção**: `webServer` agora builda o frontend (`npm run build`) e serve os assets já
+compilados via `vite preview` (`playwright.config.ts`), eliminando o cold-compile como fonte de
+flakiness. Os testes de diálogo também passaram a escopar as asserções em `page.getByRole('dialog')`
+(ver `fichas.spec.ts`, `metas.spec.ts`, `historico.spec.ts`) e as interações com `v-select` do
+Vuetify passaram a usar `focus()` + `press('Enter')` em vez de `click()` (que era interceptado pelo
+overlay do próprio componente) — nenhum `force: true`, `waitForTimeout`, `test.only`, `test.skip`
+ou `test.fixme` é usado em `e2e/tests` ou `e2e/utils`.
 
 ---
 

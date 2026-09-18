@@ -28,10 +28,11 @@ export async function criarFicha(
   token: string,
   tituloFicha: string,
   tipoFicha = 0,
+  tamanhoPiscinaM = 25,
 ) {
   const response = await request.post(`${API_BASE}/fichas-base`, {
     headers: cabecalhoAuth(token),
-    data: { tituloFicha, tipoFicha },
+    data: { tituloFicha, tipoFicha, tamanhoPiscinaM },
   })
   return jsonOk(response)
 }
@@ -66,8 +67,9 @@ export async function criarFichaComSerie(
   request: APIRequestContext,
   token: string,
   tituloFicha: string,
+  tamanhoPiscinaM = 25,
 ) {
-  const ficha = await criarFicha(request, token, tituloFicha)
+  const ficha = await criarFicha(request, token, tituloFicha, 0, tamanhoPiscinaM)
   const idFicha = ficha.codFicha ?? ficha.CodFicha
   const serie = await adicionarSerie(request, token, idFicha)
   return { ficha, serie, idFicha, idSerie: serie.codSerieFicha ?? serie.CodSerieFicha }
@@ -115,6 +117,51 @@ export async function iniciarTreino(
 
 export function seriesDoTreino(treino: any): any[] {
   return treino.seriesTreino ?? treino.SeriesTreino ?? []
+}
+
+export async function concluirTreinoComPiscina(
+  request: APIRequestContext,
+  token: string,
+  tituloTreino: string,
+  tamanhoPiscinaM: number,
+) {
+  const { idFicha } = await criarFichaComSerie(request, token, `Ficha ${tituloTreino}`, tamanhoPiscinaM)
+  const treino = await iniciarTreino(request, token, { codFicha: idFicha, tituloTreino })
+  const idTreino = treino.codTreino ?? treino.CodTreino
+  const serie = seriesDoTreino(treino)[0]
+  const idSerie = serie.codSerieTreino ?? serie.CodSerieTreino
+  const distancia = serie.distanciaPlanejadaM ?? serie.DistanciaPlanejadaM
+  const duracaoSeg = 70
+
+  await jsonOk(
+    await request.post(`${API_BASE}/treinos/${idTreino}/series/${idSerie}/repeticoes`, {
+      headers: cabecalhoAuth(token),
+      data: { numeroRepeticao: 1, distanciaRealM: distancia, duracaoSeg },
+    }),
+  )
+
+  await jsonOk(
+    await request.put(`${API_BASE}/treinos/${idTreino}/series/${idSerie}`, {
+      headers: cabecalhoAuth(token),
+      data: {
+        codSerieFicha: serie.codSerieFicha ?? serie.CodSerieFicha,
+        ordem: serie.ordem ?? serie.Ordem,
+        tipoNado: serie.tipoNado ?? serie.TipoNado,
+        quantidadeRepeticoesPlanejada:
+          serie.quantidadeRepeticoesPlanejada ?? serie.QuantidadeRepeticoesPlanejada,
+        distanciaPlanejadaM: distancia,
+        tempoPausaSeg: serie.tempoPausaSeg ?? serie.TempoPausaSeg,
+        tempoTotalSeg: duracaoSeg,
+        distanciaTotalM: distancia,
+        observacoes: serie.observacoes ?? serie.Observacoes,
+      },
+    }),
+  )
+
+  const finalizar = await request.put(`${API_BASE}/treinos/${idTreino}/finalizar`, {
+    headers: cabecalhoAuth(token),
+  })
+  return jsonOk(finalizar)
 }
 
 export async function concluirTreinoComTempo(

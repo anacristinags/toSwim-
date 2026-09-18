@@ -52,15 +52,21 @@ export default defineConfig({
     },
   ],
 
-  // Inicia automaticamente o frontend (Vite) antes dos testes de UI.
+  // Inicia automaticamente o frontend antes dos testes de UI, usando um build de
+  // producao servido por `vite preview` (nao `vite dev`). O dev server compila cada
+  // rota sob demanda na primeira requisicao (import() lazy no router); com varios
+  // workers em paralelo batendo em rotas diferentes pela primeira vez ao mesmo tempo,
+  // esse cold-compile podia estourar o timeout padrao de assercoes do Playwright,
+  // causando falha intermitente (ex.: tests/ui/fichas.spec.ts:16). O preview server
+  // ja serve os assets pre-compilados, eliminando essa fonte de flakiness.
   // A API (.NET + Postgres) precisa estar de pé manualmente — ver e2e/README.md.
   webServer: AUTOSTART_WEB
     ? {
-        command: 'npm run dev',
+        command: 'npm run build && npm run preview -- --port 5173 --strictPort',
         cwd: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'frontend'),
         url: FRONTEND_URL,
-        reuseExistingServer: true,
-        timeout: 60_000,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
       }
     : undefined,
 })
