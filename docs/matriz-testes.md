@@ -96,7 +96,7 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | TREINO-004 | Treinos | Registra tiro, atualiza série e finaliza treino | API | Treino em andamento | tempo/distância válidos | 201 tiro; 200 finalizar, `status=1` | Alta | Automatizado | `treinos.spec.ts:61` |
 | TREINO-005 | Treinos | Cancela treino em andamento | API | Treino em andamento | — | 200, `status=2` | Alta | Automatizado | `treinos.spec.ts:107` |
 | TREINO-006 | Treinos | Rejeita repetição com duração zero | API | Treino em andamento | duracaoSeg=0 | 400 | Alta | Automatizado | `treinos.spec.ts:124` |
-| TREINO-007 | Treinos | Rejeita iniciar treino a partir de ficha sem série | API | Ficha sem nenhuma série | codFicha de ficha vazia | Backend **aceita e cria treino com 0 séries** — `TreinoService.IniciarTreinoAsync` não valida `ficha.Series.Any()`. **Defeito de regra de negócio**: o requisito do QA pede bloqueio, mas o código permite. Teste documenta o comportamento real (201, `seriesTreino=[]`) e sinaliza o gap. | Alta | **Implementado nesta análise** (documenta defeito) | `treinos.spec.ts` |
+| TREINO-007 | Treinos | Rejeita iniciar treino a partir de ficha sem série | API | Ficha ativa sem nenhuma série | codFicha de ficha vazia | 400, `{ erro: "A ficha deve possuir pelo menos uma série." }` (`TreinoService.IniciarTreinoAsync` valida `ficha.Series.Any()` antes de criar o treino) | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
 | TREINO-008 | Treinos | Rejeita iniciar treino com ficha inexistente/de outro atleta | API | Ficha pertence ao atleta B | codFicha do B, token do A | 404 (`"Ficha base não encontrada ou inativa."`) | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
 | TREINO-009 | Treinos | Rejeita finalizar treino já finalizado (dupla finalização) | API | Treino já finalizado | PUT `/finalizar` novamente | 400 (`"Este treino já está finalizado ou cancelado."`) | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
 | TREINO-010 | Treinos | Rejeita cancelar treino já finalizado | API | Treino já finalizado | PUT `/cancelar` | 400 (`"Apenas treinos em andamento podem ser cancelados."`) | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
@@ -182,13 +182,10 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 > corretamente (ver `FICHA-005` e `AUTH-009`, cobertos como testes de borda normais, não como
 > defeitos).
 
-1. **Início de treino não valida ficha sem séries (`TREINO-007`)** — `TreinoService.IniciarTreinoAsync`
-   não verifica se `ficha.Series` está vazio antes de criar o treino; o sistema permite iniciar (e
-   posteriormente finalizar) um treino sem nenhuma série vinculada, o que não faz sentido para o
-   fluxo de execução de treino. **Sugestão de correção:** adicionar checagem
-   `if (!ficha.Series.Any()) throw new AppException(...)` no início do método.
+Nenhum defeito em aberto no momento.
 
-O item acima foi **documentado via teste automatizado** (o teste afirma o comportamento
-real observado, não o comportamento desejado), conforme instrução de não alterar regra de negócio
-apenas para fazer o teste passar. Recomenda-se abrir um ticket de correção e, quando corrigido,
-atualizar os testes correspondentes para refletir o novo comportamento esperado (400).
+- ~~Início de treino não validava ficha sem séries (`TREINO-007`)~~ — **corrigido.**
+  `TreinoService.IniciarTreinoAsync` agora verifica `ficha.Series.Any()` logo após localizar a
+  ficha e antes de validar o tamanho da piscina ou criar o treino; se a ficha não tiver nenhuma
+  série, lança `AppException("A ficha deve possuir pelo menos uma série.", 400)` e nenhum treino é
+  persistido. Teste atualizado em `treinos.spec.ts` para esperar 400 no lugar de 201.

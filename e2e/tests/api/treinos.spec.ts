@@ -56,9 +56,7 @@ test.describe('POST /treinos', () => {
     expect(response.status()).toBe(400)
   })
 
-  test('DEFEITO: permite iniciar treino a partir de ficha sem nenhuma serie', async ({ request }) => {
-    // TreinoService.IniciarTreinoAsync nao valida se a ficha possui series antes de iniciar
-    // o treino. Documenta o comportamento real (201, treino sem series) ate a regra ser corrigida.
+  test('rejeita iniciar treino a partir de ficha sem nenhuma serie', async ({ request }) => {
     const { token } = await registrarAtleta(request)
     await criarConfigPiscina(request, token)
     const ficha = await criarFicha(request, token, `Ficha sem serie ${Date.now()}`)
@@ -69,9 +67,9 @@ test.describe('POST /treinos', () => {
       data: { codFicha: idFicha, tituloTreino: 'Treino sem serie', tamanhoPiscinaM: 25 },
     })
 
-    expect(response.status()).toBe(201)
+    expect(response.status()).toBe(400)
     const body = await response.json()
-    expect(seriesDoTreino(body)).toHaveLength(0)
+    expect(body.erro).toBeTruthy()
   })
 
   test('atleta A nao inicia treino a partir de ficha do atleta B (isolamento)', async ({ request }) => {

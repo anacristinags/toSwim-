@@ -38,6 +38,9 @@ public class TreinoService : ITreinoService
         if (ficha == null || ficha.Status != 1)
             throw new AppException("Ficha base n?o encontrada ou inativa.", 404);
 
+        if (!ficha.Series.Any())
+            throw new AppException("A ficha deve possuir pelo menos uma s?rie.", 400);
+
         if (dto.TamanhoPiscinaM != 25 && dto.TamanhoPiscinaM != 50)
             throw new AppException("O tamanho da piscina deve ser 25 ou 50 metros.", 400);
 
