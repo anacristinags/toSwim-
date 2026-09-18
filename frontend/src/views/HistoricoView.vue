@@ -89,7 +89,7 @@
                 </v-chip>
               </td>
               <td class="text-center">
-                <v-chip size="small" color="secondary" variant="tonal">
+                <v-chip size="small" color="primary" variant="flat">
                   Piscina: {{ item.tamanhoPiscinaM }}m
                 </v-chip>
               </td>

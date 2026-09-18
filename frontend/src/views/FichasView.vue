@@ -55,7 +55,7 @@
             <v-card-title class="font-weight-bold">{{ ficha.tituloFicha }}</v-card-title>
             <v-card-subtitle>
               {{ seriesDaFicha(ficha).length }} series cadastradas
-              <v-chip size="small" color="primary" variant="tonal" class="ml-2">
+              <v-chip size="small" color="primary" variant="flat" class="ml-2">
                 Piscina: {{ ficha.tamanhoPiscinaM }}m
               </v-chip>
             </v-card-subtitle>

@@ -61,7 +61,7 @@
               <v-chip variant="outlined" color="info">
                 {{ nomeNado(meta.tipoNado) }} - {{ meta.distanciaAlvoM }}m
               </v-chip>
-              <v-chip variant="outlined" color="secondary" size="small">
+              <v-chip variant="flat" color="primary" size="small">
                 Piscina: {{ meta.tamanhoPiscinaM }}m
               </v-chip>
             </div>
