@@ -29,19 +29,19 @@ public class RepeticaoSerieTreinoService : IRepeticaoSerieTreinoService
         // 1. Validar se a s?rie de treino existe e pertence ao usu?rio
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null || serie.CodTreino != codTreino)
-            throw new AppException("S?rie de treino n?o encontrada para este treino.", 404);
+            throw new AppException("Série de treino não encontrada para este treino.", 404);
 
         // 2. Garantir que o treino esteja em andamento para aceitar edi??es/registros
         if (serie.Treino!.Status != StatusTreino.Andamento)
-            throw new AppException("N?o ? poss?vel registrar repeti??es para um treino finalizado ou cancelado.", 400);
+            throw new AppException("Não é possível registrar repetições para um treino finalizado ou cancelado.", 400);
 
         // 3. Validar se o n?mero da repeti??o j? foi lan?ado para esta s?rie
         var numeroJaExiste = await _repeticaoRepository.ExisteNumeroRepeticaoNaSerieAsync(codSerieTreino, dto.NumeroRepeticao);
         if (numeroJaExiste)
-            throw new AppException($"A repeti??o n?mero {dto.NumeroRepeticao} j? foi lan?ada para esta s?rie.", 400);
+            throw new AppException($"A repetição número {dto.NumeroRepeticao} já foi lançada para esta série.", 400);
 
         if (dto.DistanciaRealM <= 0 || dto.DuracaoSeg <= 0)
-            throw new AppException("A dist?ncia e dura??o devem ser maiores que zero.", 400);
+            throw new AppException("A distância e duração devem ser maiores que zero.", 400);
 
         // 4. Instanciar e calcular o Pace (segundos por 100 metros)
         var novaRepeticao = new RepeticaoSerieTreino
@@ -63,7 +63,7 @@ public class RepeticaoSerieTreinoService : IRepeticaoSerieTreinoService
     {
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null || serie.CodTreino != codTreino)
-            throw new AppException("S?rie de treino n?o encontrada para este treino.", 404);
+            throw new AppException("Série de treino não encontrada para este treino.", 404);
 
         var repeticoes = await _repeticaoRepository.ObterPorSerieTreinoAsync(codSerieTreino, codUsuario);
         return repeticoes.Select(MapearParaDto);
@@ -73,7 +73,7 @@ public class RepeticaoSerieTreinoService : IRepeticaoSerieTreinoService
     {
         var repeticao = await _repeticaoRepository.ObterPorIdAsync(codRepeticao, codUsuario);
         if (repeticao == null || repeticao.CodSerieTreino != codSerieTreino || repeticao.SerieTreino!.CodTreino != codTreino)
-            throw new AppException("Repeti??o n?o encontrada.", 404);
+            throw new AppException("Repetição não encontrada.", 404);
 
         return MapearParaDto(repeticao);
     }
@@ -82,20 +82,20 @@ public class RepeticaoSerieTreinoService : IRepeticaoSerieTreinoService
     {
         var repeticao = await _repeticaoRepository.ObterPorIdAsync(codRepeticao, codUsuario);
         if (repeticao == null || repeticao.CodSerieTreino != codSerieTreino || repeticao.SerieTreino!.CodTreino != codTreino)
-            throw new AppException("Repeti??o n?o encontrada.", 404);
+            throw new AppException("Repetição não encontrada.", 404);
 
         if (repeticao.SerieTreino!.Treino!.Status != StatusTreino.Andamento)
-            throw new AppException("N?o ? poss?vel atualizar dados de um treino finalizado ou cancelado.", 400);
+            throw new AppException("Não é possível atualizar dados de um treino finalizado ou cancelado.", 400);
 
         if (repeticao.NumeroRepeticao != dto.NumeroRepeticao)
         {
             var numeroJaExiste = await _repeticaoRepository.ExisteNumeroRepeticaoNaSerieAsync(codSerieTreino, dto.NumeroRepeticao);
             if (numeroJaExiste)
-                throw new AppException($"J? existe um registro para a repeti??o n?mero {dto.NumeroRepeticao}.", 400);
+                throw new AppException($"Já existe um registro para a repetição número {dto.NumeroRepeticao}.", 400);
         }
 
         if (dto.DistanciaRealM <= 0 || dto.DuracaoSeg <= 0)
-            throw new AppException("A dist?ncia e dura??o devem ser maiores que zero.", 400);
+            throw new AppException("A distância e duração devem ser maiores que zero.", 400);
 
         repeticao.NumeroRepeticao = dto.NumeroRepeticao;
         repeticao.DistanciaRealM = dto.DistanciaRealM;
@@ -112,10 +112,10 @@ public class RepeticaoSerieTreinoService : IRepeticaoSerieTreinoService
     {
         var repeticao = await _repeticaoRepository.ObterPorIdAsync(codRepeticao, codUsuario);
         if (repeticao == null || repeticao.CodSerieTreino != codSerieTreino || repeticao.SerieTreino!.CodTreino != codTreino)
-            throw new AppException("Repeti??o n?o encontrada.", 404);
+            throw new AppException("Repetição não encontrada.", 404);
 
         if (repeticao.SerieTreino!.Treino!.Status != StatusTreino.Andamento)
-            throw new AppException("N?o ? poss?vel excluir dados de um treino finalizado ou cancelado.", 400);
+            throw new AppException("Não é possível excluir dados de um treino finalizado ou cancelado.", 400);
 
         _repeticaoRepository.Remover(repeticao);
         await _repeticaoRepository.SalvarAlteracoesAsync();

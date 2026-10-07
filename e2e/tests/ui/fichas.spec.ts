@@ -1,10 +1,23 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { autenticarNaPagina } from '../../utils/auth'
+import { criarFicha, criarFichaComSerie } from '../../utils/api'
+
+/**
+ * Sincroniza com a carga real da lista de fichas (GET /fichas-base) em vez de
+ * depender do timeout padrao das assercoes enquanto a tela ainda esta carregando.
+ */
+async function abrirTelaDeFichas(page: Page) {
+  const listaDeFichas = page.waitForResponse(
+    (r) => r.request().method() === 'GET' && new URL(r.url()).pathname === '/fichas-base',
+  )
+  await page.goto('/fichas')
+  expect((await listaDeFichas).status()).toBe(200)
+}
 
 test.describe('Tela de fichas de treino', () => {
   test('exibe estado vazio para atleta sem fichas', async ({ page, request }) => {
     await autenticarNaPagina(page, request)
-    await page.goto('/fichas')
+    await abrirTelaDeFichas(page)
 
     await expect(page.getByRole('heading', { name: 'Fichas de Treino Base' })).toBeVisible()
     await expect(
@@ -107,5 +120,53 @@ test.describe('Tela de fichas de treino', () => {
 
     await expect(page.getByText('Serie adicionada com sucesso.')).toBeVisible()
     await expect(page.getByText('4x 100m - Livre')).toBeVisible()
+  })
+
+  test('exclui uma serie cadastrada na ficha', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    const titulo = `Ficha excluir serie UI ${Date.now()}`
+    await criarFichaComSerie(request, atleta.token, titulo)
+
+    await abrirTelaDeFichas(page)
+    const card = page.locator('.v-card', { hasText: titulo })
+    await expect(card.getByText('1 series cadastradas')).toBeVisible()
+
+    page.once('dialog', (dialog) => dialog.accept())
+    await card.getByTitle('Remover serie').click()
+
+    await expect(page.getByText('Serie removida com sucesso.')).toBeVisible()
+    await expect(card.getByText('0 series cadastradas')).toBeVisible()
+  })
+
+  test('duplica uma ficha existente', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    const titulo = `Ficha duplicar UI ${Date.now()}`
+    await criarFichaComSerie(request, atleta.token, titulo)
+
+    await abrirTelaDeFichas(page)
+    await expect(page.getByText('Fichas: 1 / 5 Ativas')).toBeVisible()
+    await page.locator('.v-card', { hasText: titulo }).getByTitle('Duplicar Ficha').click()
+
+    await expect(page.getByText('Ficha duplicada com sucesso.')).toBeVisible()
+    await expect(page.getByText('Fichas: 2 / 5 Ativas')).toBeVisible()
+    const copia = page.locator('.v-card', { hasText: `${titulo} (Cópia)` })
+    await expect(copia).toBeVisible()
+    await expect(copia.getByText('1 series cadastradas')).toBeVisible()
+  })
+
+  test('exibe mensagem de limite ao atingir 5 fichas ativas', async ({ page, request }) => {
+    const atleta = await autenticarNaPagina(page, request)
+    for (let i = 1; i <= 5; i++) {
+      await criarFicha(request, atleta.token, `Ficha limite ${i} ${Date.now()}`)
+    }
+
+    await abrirTelaDeFichas(page)
+
+    await expect(
+      page.getByText('Você atingiu o limite de 5 fichas ativas. Exclua uma ficha para criar outra.'),
+    ).toBeVisible()
+    await expect(page.getByText('Fichas: 5 / 5 Ativas')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Nova Ficha' })).toBeDisabled()
+    await expect(page.getByTitle('Duplicar Ficha').first()).toBeDisabled()
   })
 })

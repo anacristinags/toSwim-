@@ -8,9 +8,16 @@
 > isso está anotado na coluna de observações e listado na seção **Defeitos encontrados**.
 >
 > Baseline confirmada antes de qualquer alteração: **56/56 testes passando** (39 API + 17 UI).
+>
+> **Atualização de 2026-10-07 (rodada final de QA):** a suíte passou a ter **128 testes**
+> (92 API + 36 UI). Execução completa em 2026-10-07 00:00 (BRT): **128/128 aprovados**. A versão
+> testada é o commit `4e10660` **mais alterações locais ainda não commitadas** (ver seção
+> "Rodada final de QA (2026-10-07)" no fim deste arquivo). Os casos desta rodada estão marcados
+> como `Implementado na rodada final`.
 
 Legenda de **Status**: `Automatizado` (já existe teste e passa), `Pendente` (sem teste ainda),
-`Implementado nesta análise` (adicionado como parte deste trabalho).
+`Implementado nesta análise` (adicionado como parte deste trabalho), `Implementado na rodada final`
+(adicionado em 2026-10-07).
 
 Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 
@@ -62,6 +69,17 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | SERIE-006 | Séries | Rejeita tempoPausaSeg negativo | API | Ficha criada | tempoPausaSeg=-1 | 400 (`[Range(0,3600)]`) | Média | Pendente | — |
 | SERIE-007 | Séries | Atleta A não atualiza série do atleta B | API | Duas contas, série do B | PUT série do B, token do A | 404 (`serie.Ficha?.CodUsuario != codUsuario`) | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
 | SERIE-008 | Séries | Atleta A não exclui série do atleta B | API | Duas contas, série do B | DELETE série do B, token do A | 404 | Alta | **Implementado nesta análise** | `fichas.spec.ts` |
+| FICHA-018 | Séries | Exclui série própria e reordena as restantes | API | Ficha com 2 séries | DELETE da 1ª série | 204; ficha fica com 1 série, `ordem=1` | Alta | **Implementado na rodada final** | `fichas.spec.ts:375` |
+| SERIE-011 | Séries | Edita série própria | API | Ficha com série | PUT `/fichas-base/series/{id}` com novos valores | 200; corpo e detalhe da ficha refletem os novos valores | Alta | **Implementado na rodada final** | `fichas.spec.ts:394` |
+| SERIE-012 | Séries | Rejeita editar série para ordem já ocupada | API | Ficha com 2 séries | PUT da 2ª série com `ordem=1` | 400 "Ja existe uma serie na posicao 1 nesta ficha." | Média | **Implementado na rodada final** | `fichas.spec.ts:426` |
+| FICHA-019 | Fichas | Inativa e reativa ficha | API | Ficha ativa | PUT `/status` com `0` e depois `1` | 204 / 204; some da lista e volta com `status=1` | Alta | **Implementado na rodada final** | `fichas.spec.ts:450` |
+| FICHA-020 | Fichas | Rejeita status diferente de 0/1 | API | Ficha ativa | PUT `/status` com `2` | 400 "Status inválido. Use 0 para inativo ou 1 para ativo." | Média | **Implementado na rodada final** | `fichas.spec.ts:466` |
+| FICHA-021 | Fichas | Rejeita reativar ficha com 5 ativas | API | 1 ficha inativa + 5 ativas | PUT `/status` com `1` | 400 "Não é possível ativar esta ficha. Limite de 5 fichas ativas excedido." | Alta | **Implementado na rodada final** | `fichas.spec.ts:476` |
+| UI-FICHA-001 | Fichas UI | Estado vazio para atleta sem fichas | UI | Atleta novo | abrir `/fichas` aguardando a resposta de `GET /fichas-base` | Resposta 200; "Nenhuma ficha ativa ainda..." e "Fichas: 0 / 5 Ativas" | Alta | Automatizado (sincronização ajustada na rodada final) | `fichas.spec.ts:18` (UI) |
+| UI-FICHA-002 | Fichas UI | Cria ficha e adiciona série | UI | Atleta autenticado | criar ficha e série pelos diálogos | "0 series cadastradas" após criar; "4x 100m - Crawl" após a série | Alta | Automatizado | `fichas.spec.ts:29` (UI) |
+| UI-FICHA-003 | Fichas UI | Exclui série cadastrada | UI | Ficha com 1 série | "Remover serie" + confirmar | "Serie removida com sucesso."; "0 series cadastradas" | Alta | **Implementado na rodada final** | `fichas.spec.ts:125` (UI) |
+| UI-FICHA-004 | Fichas UI | Duplica ficha existente | UI | Ficha com 1 série | "Duplicar Ficha" | "Ficha duplicada com sucesso."; "Fichas: 2 / 5 Ativas"; card "<título> (Cópia)" com 1 série | Alta | **Implementado na rodada final** | `fichas.spec.ts:141` (UI) |
+| UI-FICHA-005 | Fichas UI | Mensagem ao atingir 5 fichas ativas | UI | 5 fichas criadas via API | abrir `/fichas` | "Você atingiu o limite de 5 fichas ativas. Exclua uma ficha para criar outra."; "Fichas: 5 / 5 Ativas"; "Nova Ficha" e "Duplicar Ficha" desabilitados | Alta | **Implementado na rodada final** | `fichas.spec.ts:157` (UI) |
 
 ## 3. Metas de Tempo (`/metas`)
 
@@ -118,11 +136,18 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | TREINO-011 | Treinos | Rejeita ações (registrar repetição) em treino inexistente | API | codTreino inexistente | POST repetição | 404 | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
 | TREINO-012 | Treinos | Rejeita registrar repetição em treino já finalizado | API | Treino finalizado | POST repetição | 400 (`"Não é possível registrar repetições para um treino finalizado ou cancelado."`) | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
 | TREINO-013 | Treinos | **Isolamento:** atleta A não acessa/edita treino do atleta B | API | Treino do atleta B | GET/PUT com token do A | 404 (`TreinoRepository.ObterPorIdAsync` filtra por `codUsuario`) | Alta | **Implementado nesta análise** | `treinos.spec.ts` |
-| TREINO-014 | Treinos | Rejeita iniciar treino a partir de ficha inativa (status=0) | API | Ficha desativada | codFicha inativo | 404 (`ficha.Status != 1`) | Média | Pendente | — |
+| TREINO-014 | Treinos | Rejeita iniciar treino a partir de ficha inativa (status=0) | API | Ficha desativada | codFicha inativo | 404 "Ficha base não encontrada ou inativa." | Média | **Implementado na rodada final** | `treinos.spec.ts:398` |
 | TREINO-015 | Treinos UI | Iniciar treino sem piscina configurada mantém botão desabilitado (fluxo já coberto) | UI | Sem config de piscina | — | Botão "Iniciar Treino na Piscina" desabilitado | Alta | Automatizado | `treinos.spec.ts:6` (UI) |
 | TREINO-016 | Treinos | Rejeita iniciar treino quando a piscina da ficha diverge da configuração atual do atleta | API | Ficha 25m, config do atleta em 50m | POST `/treinos` | 400, mensagem citando os dois tamanhos | Alta | Automatizado | `treinos.spec.ts:95` |
 | TREINO-017 | Treinos | Rejeita iniciar treino sem o atleta ter configurado a piscina | API | Ficha com série, sem `ConfigPiscina` | POST `/treinos` | 400, `"Configure o tamanho da sua piscina..."` | Alta | Automatizado | `treinos.spec.ts:83` |
 | TREINO-018 | Treinos | **Autoridade do backend:** `dto.TamanhoPiscinaM` enviado pelo cliente é ignorado; o treino criado sempre recebe `FichaBase.TamanhoPiscinaM` (já validado contra a config do atleta) — o cliente não consegue forçar outro valor no payload | API | Config=25m, ficha=25m | payload com `tamanhoPiscinaM=50` | 201, treino persistido com `tamanhoPiscinaM=25` (valor do cliente é descartado, não gera erro — contrato documentado em `IniciarTreinoRequestDto.cs` e `TreinoService.IniciarTreinoAsync`) | Alta | **Implementado nesta análise** | `treinos.spec.ts:46` |
+| TREINO-019 | Treinos | Série sem tempo informado (totais zerados) é gravada com totais `null` e o treino finaliza | API | Treino em andamento | PUT série com `tempoTotalSeg=0`, `distanciaTotalM=0` | 200; totais e pace da série `null`; finalizar 200, `status=1` | Alta | Automatizado (commit `4e10660`) | `treinos.spec.ts:195` |
+| REP-001 | Repetições | **Isolamento:** atleta A não registra, lista, consulta, altera nem exclui repetições do atleta B | API | Treino do B com 1 repetição | POST/GET/GET item/PUT/DELETE com token do A | 404 "Série de treino não encontrada para este treino." (POST e lista); 404 "Repetição não encontrada." (item, PUT, DELETE); repetição do B continua intacta | Alta | **Implementado na rodada final** | `treinos.spec.ts:420` |
+
+> **Rodada final:** os testes TREINO-006, 007, 008, 009, 011, 012 e 013 passaram a conferir o **texto
+> exato** da mensagem `erro`. Antes eles só verificavam o código HTTP (ou se `erro` existia), e por
+> isso não detectavam que a API devolvia `?` no lugar dos acentos nessas mensagens (ver "Rodada
+> final de QA").
 
 ## 6. Histórico (`/historico/treinos`)
 
@@ -152,7 +177,7 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 |----|--------|---------|--------|----------------|-------------------|---------------------|------------|--------|-------|
 | USER-001 | Usuários | 401 sem token | API | Nenhuma | — | 401 | Alta | Automatizado | `users.spec.ts:5` |
 | USER-002 | Usuários | Retorna dados do atleta autenticado | API | Atleta cadastrado | — | 200, nome/email corretos | Alta | Automatizado | `users.spec.ts:10` |
-| USER-003 | Usuários | Atleta A não altera senha do atleta B | API | Duas contas | PUT `/users/{idB}/senha`, token do A | 403 (`Forbid()` — `User.ObterUsuarioId() != id`) | Alta | Pendente | — |
+| USER-003 | Usuários | Atleta A não altera senha do atleta B | API | Duas contas | PUT `/users/{idB}/senha`, token do A | 403 (`Forbid()` — `User.ObterUsuarioId() != id`); login do B com a senha original continua 200 | Alta | **Implementado na rodada final** | `users.spec.ts:24` |
 
 ## 9. Cadastro / Login (UI)
 
@@ -162,6 +187,11 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 | UI-CAD-002 | Cadastro | Botão desabilitado com formulário inválido | UI | Nenhuma | — | Botão desabilitado | Média | Automatizado | `cadastro.spec.ts:16` |
 | UI-CAD-003 | Cadastro | Habilita envio com campos válidos | UI | Nenhuma | dados válidos | Botão habilitado | Média | Automatizado | `cadastro.spec.ts:21` |
 | UI-CAD-004 | Cadastro | Valida senha/confirmação diferentes | UI | Nenhuma | senhas diferentes | Mensagem de erro; botão desabilitado | Alta | Automatizado | `cadastro.spec.ts:30` |
+| UI-LOGIN-001 | Login | Login válido direciona para `/fichas` | UI | Atleta cadastrado via API | e-mail e senha corretos; "Entrar" | URL `/fichas`; título "Fichas de Treino Base" | Alta | **Implementado na rodada final** | `login.spec.ts:12` |
+| UI-LOGIN-002 | Login | Preserva o parâmetro `redirect` | UI | Atleta cadastrado; sem token | abrir `/metas` → `/login?redirect=/metas` → login | URL `/metas`; título "Metas de Tempo" | Alta | **Implementado na rodada final** | `login.spec.ts:24` |
+| UI-LOGIN-003 | Login | Senha incorreta | UI | Atleta cadastrado | senha errada | Alerta "Email ou senha inválidos"; permanece em `/login` | Alta | **Implementado na rodada final** | `login.spec.ts:37` |
+| UI-LOGIN-004 | Login | E-mail não cadastrado | UI | Nenhuma | e-mail inexistente | Alerta "Email ou senha inválidos"; permanece em `/login` | Alta | **Implementado na rodada final** | `login.spec.ts:48` |
+| UI-LOGIN-005 | Login | Campos vazios impedem o envio | UI | Nenhuma | ambos vazios; só e-mail; só senha | "Entrar" desabilitado nos três casos; permanece em `/login` | Alta | **Implementado na rodada final** | `login.spec.ts:57` |
 
 ## 10. Navegação, logout e proteção de rotas (UI)
 
@@ -179,13 +209,23 @@ Legenda de **Prioridade**: `Alta`, `Média`, `Baixa`.
 
 | Camada | Automatizados (baseline anterior) | Implementados nesta análise | Implementados na rodada de piscina/metas/histórico | Pendentes (baixo risco) |
 |--------|-------------------------------------|-------------------------------|--------------------------------------------------------|---------------------------|
-| API    | 39                                   | 28                             | 14 (FICHA-013..016, SERIE-009, META-013..015, METR-006..008, TREINO-016..018, HIST-006) | 6 (AUTH-008, AUTH-010, SERIE-006, META-011, TREINO-014, METR-005, USER-003) |
+| API    | 39                                   | 28                             | 14 (FICHA-013..016, SERIE-009, META-013..015, METR-006..008, TREINO-016..018, HIST-006) | 7 na época (AUTH-008, AUTH-010, SERIE-006, META-011, TREINO-014, METR-005, USER-003) |
 | UI     | 17                                   | 5                               | 4 (FICHA-017, SERIE-010, META-016..017, HIST-007)      | 0 adicionais mapeados nesta rodada |
 | **Total** | **56**                           | **33**                         | **18**                                                  | **7** |
 
-> Contagem real de testes (`npx playwright test --list` / execução completa): **82 testes de API**
-> e **28 testes de UI** = **110 testes no total**, todos passando — inclusive em **execução
-> paralela** (`npx playwright test`, 4 workers, ~1m30s), que é o modo padrão usado em CI.
+> Registro histórico (2026-09-16): **82 testes de API** e **28 testes de UI** = **110 testes no
+> total**, todos passando em execução paralela (4 workers, ~1m30s).
+
+**Situação em 2026-10-07 (rodada final):**
+
+| Camada | Testes em 2026-09-16 | + commit `4e10660` | + rodada final | Total atual | Pendentes |
+|--------|----------------------|--------------------|----------------|-------------|-----------|
+| API | 82 | +1 (TREINO-019) | +9 (FICHA-018..021, SERIE-011, SERIE-012, TREINO-014, REP-001, USER-003) | **92** | 5 (AUTH-008, AUTH-010, SERIE-006, META-011, METR-005) |
+| UI | 28 | — | +8 (UI-FICHA-003..005, UI-LOGIN-001..005) | **36** | — |
+| **Total** | **110** | **+1** | **+17** | **128** | **5** |
+
+> Execução completa em 2026-10-07 00:00:54 (BRT), 4 workers: **128 executados, 128 aprovados,
+> 0 reprovados, 0 ignorados**, 96,5 s. Detalhes em "Rodada final de QA (2026-10-07)".
 
 > Os pendentes remanescentes são cenários de prioridade média/baixa (limites de tamanho de string,
 > mensagens de erro específicas para IDs inexistentes) que não estavam entre os focos de risco
@@ -208,6 +248,22 @@ Vuetify passaram a usar `focus()` + `press('Enter')` em vez de `click()` (que er
 overlay do próprio componente) — nenhum `force: true`, `waitForTimeout`, `test.only`, `test.skip`
 ou `test.fixme` é usado em `e2e/tests` ou `e2e/utils`.
 
+**Atualização 2026-10-06/07 — UI-FICHA-001** (`ui/fichas.spec.ts`, "exibe estado vazio..."):
+
+- 2026-10-06 22:17: falhou uma vez numa execução completa (texto de estado vazio não apareceu em
+  5 s; a captura mostra a tela ainda carregando). Nessa execução, os 4 testes de UI de fichas,
+  primeiros a chamar a API, levaram de 31 a 34 s, contra 4,6 a 6,1 s numa execução seguinte.
+- Ajuste no teste (rodada final): o teste passou a **aguardar a resposta de `GET /fichas-base`** e
+  a conferir que ela é 200 antes de verificar o texto. O timeout das asserções não foi alterado e
+  não foi criado global setup.
+- 2026-10-06 23:55, primeira execução dos arquivos afetados logo após iniciar a API: o
+  `GET /fichas-base` voltou **500**. No mesmo período, o log da API registrou 6 erros
+  `Npgsql ... TimeoutException` ao abrir conexão com o PostgreSQL. Os outros 3 testes de UI de
+  fichas que rodavam em paralelo também falharam (diálogo não fechou). **A causa não foi
+  comprovada**; o registro é só do que foi observado.
+- Depois disso, o caso passou na reexecução dos arquivos afetados (23:59), na execução completa
+  (00:00) e numa repetição isolada 3× (00:02, 3/3).
+
 ---
 
 ## Defeitos encontrados
@@ -226,3 +282,83 @@ Nenhum defeito em aberto no momento.
   ficha e antes de validar o tamanho da piscina ou criar o treino; se a ficha não tiver nenhuma
   série, lança `AppException("A ficha deve possuir pelo menos uma série.", 400)` e nenhum treino é
   persistido. Teste atualizado em `treinos.spec.ts` para esperar 400 no lugar de 201.
+- Mudança documentada (commit `4e10660`): séries sem tempo informado gravam totais e pace como
+  `null` em vez de 0 (TREINO-019).
+- **Corrigido na rodada final:** 28 mensagens de erro em `TreinoService.cs` (16) e
+  `RepeticaoSerieTreinoService.cs` (12) continham `?` literal no lugar dos acentos (ex.: "A ficha
+  deve possuir pelo menos uma s?rie."), texto que a tela de execução exibe ao usuário. Os acentos
+  foram restaurados e os arquivos salvos em UTF-8. Os testes TREINO-006..009, 011..013, TREINO-014
+  e REP-001 conferem o texto exato de 8 mensagens distintas (textos que aparecem em 15 das 28
+  linhas corrigidas); as outras 13 linhas têm textos que nenhum teste atual confere.
+- **Corrigido na rodada final (confirmado por teste):** em `FichaBaseService.cs`, três textos
+  tinham o caractere de substituição U+FFFD gravado no arquivo e chegavam assim à resposta:
+  "Status inv�lido...", "N�o � poss�vel ativar esta ficha..." e o sufixo da cópia "(C�pia)".
+  Os testes FICHA-020, FICHA-021 e UI-FICHA-004 falharam com o texto corrompido e passaram depois da
+  correção. Nenhum ID formal de defeito foi criado.
+
+## Rodada final de QA (2026-10-07)
+
+### Versão testada
+
+- Base: commit `4e1066092d48f156ed11c5586f4951a192aab98e` (`develop`).
+- **Mais alterações locais não commitadas** (8 arquivos alterados e 1 novo; impressão digital
+  SHA-256 dos 16 primeiros caracteres de `git diff -- backend frontend e2e` + `login.spec.ts`:
+  `71cb58bf31acc1fa`):
+  - `backend/ToSwim.Application/Services/TreinoService.cs` — 16 mensagens com acentos restaurados
+  - `backend/ToSwim.Application/Services/RepeticaoSerieTreinoService.cs` — 12 mensagens com acentos restaurados
+  - `backend/ToSwim.Application/Services/FichaBaseService.cs` — 3 textos com U+FFFD corrigidos
+  - `frontend/src/views/FichasView.vue` — alerta de limite de 5 fichas
+  - `e2e/tests/api/fichas.spec.ts`, `e2e/tests/api/treinos.spec.ts`, `e2e/tests/api/users.spec.ts`,
+    `e2e/tests/ui/fichas.spec.ts` — testes novos e ajustados
+  - `e2e/tests/ui/login.spec.ts` — novo
+
+### Execuções (ambiente local)
+
+| Execução | Início (BRT) | Escopo | Executados | Aprovados | Reprovados | Ignorados | Duração |
+|---|---|---|---|---|---|---|---|
+| R2 | 2026-10-06 23:55:14 | Arquivos afetados (código antes da correção do `FichaBaseService`) | 64 | 55 | 9 | 0 | 130,8 s |
+| R3a | 2026-10-06 23:59:16 | Arquivos afetados (código final) | 64 | 64 | 0 | 0 | 80,1 s |
+| **R3** | **2026-10-07 00:00:54** | **Suíte completa (código final)** | **128** | **128** | **0** | **0** | **96,5 s** |
+| R3-iso | 2026-10-07 00:02:50 | UI-FICHA-001 × 3 | 3 | 3 | 0 | 0 | 38,9 s |
+
+Falhas da R2: 2 de API por texto corrompido (FICHA-020, FICHA-021), 1 de UI por texto corrompido
+(UI-FICHA-004), 2 de UI por seletor do próprio teste (UI-LOGIN-003/004: `getByRole('alert')`
+também encontrava as mensagens dos campos do Vuetify; corrigido para `.v-alert`) e 4 de UI de
+fichas que rodaram junto com os erros de conexão descritos em "Estabilidade da suíte".
+
+### Códigos HTTP atuais para acesso a recursos de outro atleta (sem padronização nesta rodada)
+
+| Recurso | Código atual | Coberto por teste? |
+|---|---|---|
+| `PUT /users/{idB}/senha` | 403 | Sim (USER-003) |
+| Repetições: `POST`, `GET` lista | 404 "Série de treino não encontrada para este treino." | Sim (REP-001) |
+| Repetições: `GET` item, `PUT`, `DELETE` | 404 "Repetição não encontrada." | Sim (REP-001) |
+| `PUT /fichas-base/{id}`, `PUT /fichas-base/{id}/status`, `GET /fichas-base/{id}/series`, `POST /fichas-base/series/{id}/duplicar` | 404 | Não (lido no código) |
+| `PUT /metas/{id}`, `GET /metas/{id}/progresso` | 404 | Não (lido no código; METR-005 pendente) |
+| `POST /treinos/{id}/series`; `GET`, `PUT`, `DELETE /treinos/{id}/series/{idSerie}` | 404 | `PUT` não referenciado com token de outro atleta; demais não (lido no código) |
+| `POST /treinos/{idB}/metas/{idMeta}` | 404 | Não (lido no código) |
+| `DELETE` de vínculo Treino × Meta pertencente a B | 403 (404 se o vínculo não existir) | Não (lido no código) |
+| `GET /treinos/{idB}/series`, `GET /treinos/{idB}/metas`, `GET /metas/{idB}/treinos` | **200 com lista vazia** | Não (lido no código) |
+
+### Cobertura de endpoints: chamadas diretas × indiretas
+
+51 endpoints mapeados nos controllers. **Direta** = o endpoint é chamado por um teste de API (ou
+helper de `e2e/utils`). **Indireta** = o endpoint só é chamado pelo frontend durante um teste de UI,
+sem que o teste verifique a resposta.
+
+| Situação | Quantidade | Endpoints |
+|---|---|---|
+| Chamada direta | 37 | os 31 anteriores + `PUT /users/{id}/senha`, `PUT /fichas-base/{id}/status`, `GET .../repeticoes`, `GET .../repeticoes/{idRep}`, `PUT .../repeticoes/{idRep}`, `DELETE .../repeticoes/{idRep}` |
+| Só indireta (pela UI, em UI-TREINO-001) | 2 | `GET /treinos` (com `status=0`), `PUT /treinos/{id}` |
+| Nenhuma chamada | 12 | `PUT /fichas-base/{id}`, `GET /fichas-base/{id}/series`, `POST /fichas-base/series/{id}/duplicar`, `POST /treinos/{id}/series`, `GET /treinos/{id}/series`, `GET /treinos/{id}/series/{idSerie}`, `DELETE /treinos/{id}/series/{idSerie}`, `PUT /metas/{id}`, 4 endpoints de Treino × Meta |
+
+### Deixado como melhoria futura nesta rodada
+
+Exclusão do treino inteiro; mudança no contrato de adicionar série a treino em andamento; testes de
+filtros e ordenação do histórico; cobertura dos endpoints restantes; testes de Treino × Meta (sem
+alterar o comportamento atual do vínculo); padronização dos códigos de acesso entre atletas; nova
+tela inicial e métricas na UI; tela de detalhe da meta; tipos de ficha; total acumulado no
+histórico; UI de edição de série; regras de meta (meta ativa por série, conclusão automática) e
+validação do tipo de nado da meta; textos ainda corrompidos não confirmados por teste
+(`FichaBaseService.cs`: mensagem de limite ao duplicar e "Ficha de treino n�o encontrada..."; demais
+arquivos em ISO-8859 não verificados).

@@ -39,10 +39,10 @@ public class TreinoService : ITreinoService
         // 1. Obter a Ficha Base ativa com suas s?ries associadas
         var ficha = await _fichaBaseRepository.BuscarPorIdAsync(dto.CodFicha, codUsuario);
         if (ficha == null || ficha.Status != 1)
-            throw new AppException("Ficha base n?o encontrada ou inativa.", 404);
+            throw new AppException("Ficha base não encontrada ou inativa.", 404);
 
         if (!ficha.Series.Any())
-            throw new AppException("A ficha deve possuir pelo menos uma s?rie.", 400);
+            throw new AppException("A ficha deve possuir pelo menos uma série.", 400);
 
         var configPiscina = await _configPiscinaRepository.BuscarPorUsuarioAsync(codUsuario);
         if (configPiscina == null)
@@ -98,7 +98,7 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino n?o encontrado.", 404);
+            throw new AppException("Treino não encontrado.", 404);
 
         return MapearParaDto(treino);
     }
@@ -116,7 +116,7 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino n?o encontrado.", 404);
+            throw new AppException("Treino não encontrado.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
             throw new AppException("Apenas treinos em andamento podem ser atualizados.", 400);
@@ -136,10 +136,10 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino n?o encontrado.", 404);
+            throw new AppException("Treino não encontrado.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
-            throw new AppException("Este treino j? est? finalizado ou cancelado.", 400);
+            throw new AppException("Este treino já está finalizado ou cancelado.", 400);
 
         // Calcular Consolida??o de Dados em Lote (Dist?ncia Total, Dura??o Total, Pace M?dio)
         int distanciaAcumulada = 0;
@@ -181,7 +181,7 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino n?o encontrado.", 404);
+            throw new AppException("Treino não encontrado.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
             throw new AppException("Apenas treinos em andamento podem ser cancelados.", 400);
@@ -202,14 +202,14 @@ public class TreinoService : ITreinoService
     {
         var treino = await _treinoRepository.ObterPorIdAsync(codTreino, codUsuario);
         if (treino == null)
-            throw new AppException("Treino n?o encontrado ou n?o pertence ao nadador.", 404);
+            throw new AppException("Treino não encontrado ou não pertence ao nadador.", 404);
 
         if (treino.Status != StatusTreino.Andamento)
-            throw new AppException("N?o ? permitido adicionar s?ries a um treino j? finalizado ou cancelado.", 400);
+            throw new AppException("Não é permitido adicionar séries a um treino já finalizado ou cancelado.", 400);
 
         var ordemJaExiste = await _serieTreinoRepository.ExisteOrdemNoTreinoAsync(codTreino, dto.Ordem);
         if (ordemJaExiste)
-            throw new AppException($"J? existe uma s?rie na ordem {dto.Ordem} para este treino.", 400);
+            throw new AppException($"Já existe uma série na ordem {dto.Ordem} para este treino.", 400);
 
         var novaSerie = new SerieTreino
         {
@@ -247,7 +247,7 @@ public class TreinoService : ITreinoService
     {
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null)
-            throw new AppException("S?rie de treino n?o encontrada.", 404);
+            throw new AppException("Série de treino não encontrada.", 404);
 
         return MapearParaDto(serie);
     }
@@ -256,16 +256,16 @@ public class TreinoService : ITreinoService
     {
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null)
-            throw new AppException("S?rie de treino n?o encontrada.", 404);
+            throw new AppException("Série de treino não encontrada.", 404);
 
         if (serie.Treino!.Status != StatusTreino.Andamento)
-            throw new AppException("N?o ? permitido editar s?ries de um treino finalizado ou cancelado.", 400);
+            throw new AppException("Não é permitido editar séries de um treino finalizado ou cancelado.", 400);
 
         if (serie.Ordem != dto.Ordem)
         {
             var ordemJaExiste = await _serieTreinoRepository.ExisteOrdemNoTreinoAsync(serie.CodTreino, dto.Ordem);
             if (ordemJaExiste)
-                throw new AppException($"J? existe outra s?rie na ordem {dto.Ordem} para este treino.", 400);
+                throw new AppException($"Já existe outra série na ordem {dto.Ordem} para este treino.", 400);
         }
 
         serie.Ordem = dto.Ordem;
@@ -296,10 +296,10 @@ public class TreinoService : ITreinoService
     {
         var serie = await _serieTreinoRepository.ObterPorIdAsync(codSerieTreino, codUsuario);
         if (serie == null)
-            throw new AppException("S?rie de treino n?o encontrada.", 404);
+            throw new AppException("Série de treino não encontrada.", 404);
 
         if (serie.Treino!.Status != StatusTreino.Andamento)
-            throw new AppException("N?o ? permitido excluir s?ries de um treino finalizado ou cancelado.", 400);
+            throw new AppException("Não é permitido excluir séries de um treino finalizado ou cancelado.", 400);
 
         _serieTreinoRepository.Remover(serie);
         await _serieTreinoRepository.SalvarAlteracoesAsync();

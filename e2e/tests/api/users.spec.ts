@@ -19,3 +19,31 @@ test.describe('GET /users/me', () => {
     expect(body).toMatchObject({ nome, email })
   })
 })
+
+test.describe('PUT /users/{id}/senha', () => {
+  test('atleta A nao altera a senha do atleta B (isolamento)', async ({ request }) => {
+    const atletaA = await registrarAtleta(request)
+    const atletaB = await registrarAtleta(request)
+
+    const dadosB = await request.get('/users/me', {
+      headers: { Authorization: `Bearer ${atletaB.token}` },
+    })
+    const idB = (await dadosB.json()).codUsuario
+
+    const response = await request.put(`/users/${idB}/senha`, {
+      headers: { Authorization: `Bearer ${atletaA.token}` },
+      data: {
+        senhaAtual: atletaB.senha,
+        novaSenha: 'senhaInvasora123',
+        confirmarNovaSenha: 'senhaInvasora123',
+      },
+    })
+    expect(response.status()).toBe(403)
+
+    // A senha original do atleta B continua valida
+    const loginB = await request.post('/auth/login', {
+      data: { email: atletaB.email, senha: atletaB.senha },
+    })
+    expect(loginB.status()).toBe(200)
+  })
+})

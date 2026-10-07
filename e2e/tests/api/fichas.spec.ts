@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type APIRequestContext } from '@playwright/test'
 import { cabecalhoAuth, registrarAtleta } from '../../utils/auth'
 import { adicionarSerie, criarFicha } from '../../utils/api'
 
@@ -368,5 +368,124 @@ test.describe('isolamento de séries entre atletas', () => {
     })
 
     expect(response.status()).toBe(404)
+  })
+})
+
+test.describe('exclusão e edição de série da ficha', () => {
+  test('exclui serie propria e reordena as series restantes', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha excluir serie ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+    const primeira = await adicionarSerie(request, token, idFicha, { distanciaM: 100 })
+    await adicionarSerie(request, token, idFicha, { distanciaM: 200 })
+    const idPrimeira = primeira.codSerieFicha ?? primeira.CodSerieFicha
+
+    const excluir = await request.delete(`/fichas-base/series/${idPrimeira}`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(excluir.status()).toBe(204)
+
+    const detalhe = await request.get(`/fichas-base/${idFicha}`, { headers: cabecalhoAuth(token) })
+    const series = (await detalhe.json()).series
+    expect(series).toHaveLength(1)
+    expect(series[0]).toMatchObject({ ordem: 1, distanciaM: 200 })
+  })
+
+  test('edita serie propria', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha editar serie ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+    const serie = await adicionarSerie(request, token, idFicha)
+    const idSerie = serie.codSerieFicha ?? serie.CodSerieFicha
+
+    const editar = await request.put(`/fichas-base/series/${idSerie}`, {
+      headers: cabecalhoAuth(token),
+      data: {
+        tipoNado: 1,
+        quantidadeRepeticoes: 6,
+        distanciaM: 50,
+        tempoPausaSeg: 15,
+        isGoalSeries: false,
+        ignorarNoPace: true,
+      },
+    })
+    expect(editar.status()).toBe(200)
+    const esperado = {
+      tipoNado: 1,
+      quantidadeRepeticoes: 6,
+      distanciaM: 50,
+      tempoPausaSeg: 15,
+      ignorarNoPace: true,
+    }
+    expect(await editar.json()).toMatchObject(esperado)
+
+    const detalhe = await request.get(`/fichas-base/${idFicha}`, { headers: cabecalhoAuth(token) })
+    expect((await detalhe.json()).series[0]).toMatchObject(esperado)
+  })
+
+  test('rejeita editar serie para uma ordem ja ocupada', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha ordem ocupada ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+    await adicionarSerie(request, token, idFicha)
+    const segunda = await adicionarSerie(request, token, idFicha)
+    const idSegunda = segunda.codSerieFicha ?? segunda.CodSerieFicha
+
+    const editar = await request.put(`/fichas-base/series/${idSegunda}`, {
+      headers: cabecalhoAuth(token),
+      data: { ordem: 1, tipoNado: 0, quantidadeRepeticoes: 4, distanciaM: 100, tempoPausaSeg: 20 },
+    })
+    expect(editar.status()).toBe(400)
+    expect((await editar.json()).erro).toBe('Ja existe uma serie na posicao 1 nesta ficha.')
+  })
+})
+
+test.describe('PUT /fichas-base/{id}/status', () => {
+  const alterarStatus = (request: APIRequestContext, token: string, idFicha: number, status: string) =>
+    request.put(`/fichas-base/${idFicha}/status`, {
+      headers: { ...cabecalhoAuth(token), 'Content-Type': 'application/json' },
+      data: status,
+    })
+
+  test('inativa e reativa uma ficha', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha status ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+
+    expect((await alterarStatus(request, token, idFicha, '0')).status()).toBe(204)
+    const listaInativa = await request.get('/fichas-base', { headers: cabecalhoAuth(token) })
+    expect(await listaInativa.json()).toEqual([])
+
+    expect((await alterarStatus(request, token, idFicha, '1')).status()).toBe(204)
+    const listaAtiva = await request.get('/fichas-base', { headers: cabecalhoAuth(token) })
+    const fichas = await listaAtiva.json()
+    expect(fichas).toHaveLength(1)
+    expect(fichas[0]).toMatchObject({ codFicha: idFicha, status: 1 })
+  })
+
+  test('rejeita status diferente de 0 ou 1', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha status invalido ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+
+    const response = await alterarStatus(request, token, idFicha, '2')
+    expect(response.status()).toBe(400)
+    expect((await response.json()).erro).toBe('Status inválido. Use 0 para inativo ou 1 para ativo.')
+  })
+
+  test('rejeita reativar ficha quando ja existem 5 fichas ativas', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    const ficha = await criarFicha(request, token, `Ficha reativar ${Date.now()}`)
+    const idFicha = ficha.codFicha ?? ficha.CodFicha
+    expect((await alterarStatus(request, token, idFicha, '0')).status()).toBe(204)
+    for (let i = 1; i <= 5; i++) {
+      await criarFicha(request, token, `Ficha ativa ${i} ${Date.now()}`)
+    }
+
+    const response = await alterarStatus(request, token, idFicha, '1')
+    expect(response.status()).toBe(400)
+    expect((await response.json()).erro).toBe(
+      'Não é possível ativar esta ficha. Limite de 5 fichas ativas excedido.',
+    )
   })
 })

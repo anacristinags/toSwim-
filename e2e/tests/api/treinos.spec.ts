@@ -122,7 +122,7 @@ test.describe('POST /treinos', () => {
 
     expect(response.status()).toBe(400)
     const body = await response.json()
-    expect(body.erro).toBeTruthy()
+    expect(body.erro).toBe('A ficha deve possuir pelo menos uma série.')
   })
 
   test('atleta A nao inicia treino a partir de ficha do atleta B (isolamento)', async ({ request }) => {
@@ -141,6 +141,7 @@ test.describe('POST /treinos', () => {
     })
 
     expect(response.status()).toBe(404)
+    expect((await response.json()).erro).toBe('Ficha base não encontrada ou inativa.')
   })
 })
 
@@ -268,6 +269,7 @@ test.describe('execução, repetição, finalizar e cancelar', () => {
     })
 
     expect(response.status()).toBe(400)
+    expect((await response.json()).erro).toBe('A distância e duração devem ser maiores que zero.')
   })
 
   test('rejeita finalizar um treino ja finalizado (dupla finalizacao)', async ({ request }) => {
@@ -289,6 +291,7 @@ test.describe('execução, repetição, finalizar e cancelar', () => {
       headers: cabecalhoAuth(token),
     })
     expect(segundaFinalizacao.status()).toBe(400)
+    expect((await segundaFinalizacao.json()).erro).toBe('Este treino já está finalizado ou cancelado.')
   })
 
   test('rejeita cancelar um treino ja finalizado', async ({ request }) => {
@@ -334,6 +337,9 @@ test.describe('execução, repetição, finalizar e cancelar', () => {
     })
 
     expect(response.status()).toBe(400)
+    expect((await response.json()).erro).toBe(
+      'Não é possível registrar repetições para um treino finalizado ou cancelado.',
+    )
   })
 
   test('rejeita registrar repeticao em treino inexistente', async ({ request }) => {
@@ -356,6 +362,7 @@ test.describe('execução, repetição, finalizar e cancelar', () => {
     )
 
     expect(response.status()).toBe(404)
+    expect((await response.json()).erro).toBe('Série de treino não encontrada para este treino.')
   })
 
   test('atleta A nao acessa nem finaliza treino do atleta B (isolamento)', async ({ request }) => {
@@ -377,10 +384,95 @@ test.describe('execução, repetição, finalizar e cancelar', () => {
       headers: cabecalhoAuth(tokenA),
     })
     expect(acessar.status()).toBe(404)
+    expect((await acessar.json()).erro).toBe('Treino não encontrado.')
 
     const finalizar = await request.put(`/treinos/${idTreinoB}/finalizar`, {
       headers: cabecalhoAuth(tokenA),
     })
     expect(finalizar.status()).toBe(404)
+    expect((await finalizar.json()).erro).toBe('Treino não encontrado.')
+  })
+})
+
+test.describe('status da ficha ao iniciar treino', () => {
+  test('rejeita iniciar treino a partir de ficha inativa', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token)
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha inativa ${Date.now()}`)
+
+    const inativar = await request.put(`/fichas-base/${idFicha}/status`, {
+      headers: { ...cabecalhoAuth(token), 'Content-Type': 'application/json' },
+      data: '0',
+    })
+    expect(inativar.status()).toBe(204)
+
+    const response = await request.post('/treinos', {
+      headers: cabecalhoAuth(token),
+      data: { codFicha: idFicha, tituloTreino: 'Treino com ficha inativa', tamanhoPiscinaM: 25 },
+    })
+
+    expect(response.status()).toBe(404)
+    expect((await response.json()).erro).toBe('Ficha base não encontrada ou inativa.')
+  })
+})
+
+test.describe('isolamento de repetições entre atletas', () => {
+  test('atleta A nao registra, consulta, altera nem exclui repeticoes do atleta B', async ({
+    request,
+  }) => {
+    const { token: tokenA } = await registrarAtleta(request)
+    const { token: tokenB } = await registrarAtleta(request)
+    await criarConfigPiscina(request, tokenB)
+    const { idFicha } = await criarFichaComSerie(request, tokenB, `Ficha repeticoes B ${Date.now()}`)
+    const treinoB = await iniciarTreino(request, tokenB, {
+      codFicha: idFicha,
+      tituloTreino: 'Treino B com repeticao',
+    })
+    const idTreino = treinoB.codTreino ?? treinoB.CodTreino
+    const serieB = seriesDoTreino(treinoB)[0]
+    const idSerie = serieB.codSerieTreino ?? serieB.CodSerieTreino
+    const urlRepeticoes = `/treinos/${idTreino}/series/${idSerie}/repeticoes`
+
+    const criadaPorB = await request.post(urlRepeticoes, {
+      headers: cabecalhoAuth(tokenB),
+      data: { numeroRepeticao: 1, distanciaRealM: 100, duracaoSeg: 70 },
+    })
+    expect(criadaPorB.status()).toBe(201)
+    const repeticaoB = await criadaPorB.json()
+    const idRepeticao = repeticaoB.codRepeticaoSerieTreino ?? repeticaoB.CodRepeticaoSerieTreino
+    const urlRepeticao = `${urlRepeticoes}/${idRepeticao}`
+
+    const registrar = await request.post(urlRepeticoes, {
+      headers: cabecalhoAuth(tokenA),
+      data: { numeroRepeticao: 2, distanciaRealM: 100, duracaoSeg: 65 },
+    })
+    expect(registrar.status()).toBe(404)
+    expect((await registrar.json()).erro).toBe('Série de treino não encontrada para este treino.')
+
+    const listar = await request.get(urlRepeticoes, { headers: cabecalhoAuth(tokenA) })
+    expect(listar.status()).toBe(404)
+    expect((await listar.json()).erro).toBe('Série de treino não encontrada para este treino.')
+
+    const obter = await request.get(urlRepeticao, { headers: cabecalhoAuth(tokenA) })
+    expect(obter.status()).toBe(404)
+    expect((await obter.json()).erro).toBe('Repetição não encontrada.')
+
+    const atualizar = await request.put(urlRepeticao, {
+      headers: cabecalhoAuth(tokenA),
+      data: { numeroRepeticao: 1, distanciaRealM: 100, duracaoSeg: 10 },
+    })
+    expect(atualizar.status()).toBe(404)
+    expect((await atualizar.json()).erro).toBe('Repetição não encontrada.')
+
+    const excluir = await request.delete(urlRepeticao, { headers: cabecalhoAuth(tokenA) })
+    expect(excluir.status()).toBe(404)
+    expect((await excluir.json()).erro).toBe('Repetição não encontrada.')
+
+    // A repeticao do atleta B permanece intacta
+    const listaB = await request.get(urlRepeticoes, { headers: cabecalhoAuth(tokenB) })
+    expect(listaB.status()).toBe(200)
+    const repeticoesB = await listaB.json()
+    expect(repeticoesB).toHaveLength(1)
+    expect(repeticoesB[0]).toMatchObject({ numeroRepeticao: 1, duracaoSeg: 70 })
   })
 })

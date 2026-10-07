@@ -68,7 +68,7 @@ public class FichaBaseService : IFichaBaseService
     public async Task AlterarStatusAsync(int codFicha, int codUsuario, short novoStatus)
     {
         if (novoStatus != 0 && novoStatus != 1)
-            throw new AppException("Status inv�lido. Use 0 para inativo ou 1 para ativo.", 400);
+            throw new AppException("Status inválido. Use 0 para inativo ou 1 para ativo.", 400);
 
         var ficha = await ObterFichaEValidarDonoAsync(codFicha, codUsuario);
 
@@ -77,7 +77,7 @@ public class FichaBaseService : IFichaBaseService
             // Valida o limite antes de reativar uma ficha
             var quantidadeAtivas = await _fichaRepository.ContarFichasAtivasAsync(codUsuario);
             if (quantidadeAtivas >= 5)
-                throw new AppException("N�o � poss�vel ativar esta ficha. Limite de 5 fichas ativas excedido.", 400);
+                throw new AppException("Não é possível ativar esta ficha. Limite de 5 fichas ativas excedido.", 400);
         }
 
         ficha.Status = novoStatus;
@@ -113,7 +113,7 @@ public class FichaBaseService : IFichaBaseService
         var novaFicha = new FichaBase
         {
             CodUsuario = codUsuario,
-            TituloFicha = $"{fichaOriginal.TituloFicha} (C�pia)",
+            TituloFicha = $"{fichaOriginal.TituloFicha} (Cópia)",
             TipoFicha = fichaOriginal.TipoFicha,
             TamanhoPiscinaM = fichaOriginal.TamanhoPiscinaM,
             Status = 1,

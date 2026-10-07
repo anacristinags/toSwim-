@@ -32,6 +32,16 @@
       {{ mensagem.texto }}
     </v-alert>
 
+    <v-alert
+      v-if="!carregando && fichas.length >= 5"
+      type="warning"
+      variant="tonal"
+      class="mb-4"
+      density="compact"
+    >
+      Você atingiu o limite de 5 fichas ativas. Exclua uma ficha para criar outra.
+    </v-alert>
+
     <div v-if="carregando" class="text-center py-12">
       <v-progress-circular indeterminate color="primary"></v-progress-circular>
     </div>
