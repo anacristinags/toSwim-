@@ -387,8 +387,12 @@ const finalizarTreino = async () => {
         }
       }
 
-      const tempoTotalSeg = temposValidos.reduce((acc, item) => acc + item.duracao, 0)
-      const distanciaTotalM = temposValidos.length * serie.distanciaM
+      // Series sem tempo informado sao salvas sem totais (o banco exige NULL ou > 0).
+      const serieCronometrada = temposValidos.length > 0
+      const tempoTotalSeg = serieCronometrada
+        ? temposValidos.reduce((acc, item) => acc + item.duracao, 0)
+        : null
+      const distanciaTotalM = serieCronometrada ? temposValidos.length * serie.distanciaM : null
 
       await treinoService.atualizarSerie(codTreino, serie.codSerieTreino, {
         codSerieFicha: serie.codSerieFicha,

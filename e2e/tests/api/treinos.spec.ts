@@ -191,6 +191,49 @@ test.describe('execução, repetição, finalizar e cancelar', () => {
     })
   })
 
+  test('aceita série sem tempo informado (totais zerados) e finaliza o treino', async ({ request }) => {
+    const { token } = await registrarAtleta(request)
+    await criarConfigPiscina(request, token)
+    const { idFicha } = await criarFichaComSerie(request, token, `Ficha serie sem tempo ${Date.now()}`)
+    const treino = await iniciarTreino(request, token, {
+      codFicha: idFicha,
+      tituloTreino: 'Serie nao cronometrada',
+    })
+    const idTreino = treino.codTreino ?? treino.CodTreino
+    const idSerie = seriesDoTreino(treino)[0].codSerieTreino ?? seriesDoTreino(treino)[0].CodSerieTreino
+
+    // Totais zerados sao tratados como "nao informado" (o banco exige NULL ou > 0).
+    const atualizarSerie = await request.put(`/treinos/${idTreino}/series/${idSerie}`, {
+      headers: cabecalhoAuth(token),
+      data: {
+        ordem: 1,
+        tipoNado: 0,
+        quantidadeRepeticoesPlanejada: 4,
+        distanciaPlanejadaM: 100,
+        tempoPausaSeg: 20,
+        tempoTotalSeg: 0,
+        distanciaTotalM: 0,
+      },
+    })
+    expect(atualizarSerie.status()).toBe(200)
+    expect(await atualizarSerie.json()).toMatchObject({
+      tempoTotalSeg: null,
+      distanciaTotalM: null,
+      paceMedioSeg: null,
+    })
+
+    const finalizar = await request.put(`/treinos/${idTreino}/finalizar`, {
+      headers: cabecalhoAuth(token),
+    })
+    expect(finalizar.status()).toBe(200)
+    expect(await finalizar.json()).toMatchObject({
+      status: 1,
+      distanciaTotalM: 0,
+      duracaoTotalSeg: 0,
+      paceMedioSeg: null,
+    })
+  })
+
   test('cancela treino em andamento', async ({ request }) => {
     const { token } = await registrarAtleta(request)
     await criarConfigPiscina(request, token)

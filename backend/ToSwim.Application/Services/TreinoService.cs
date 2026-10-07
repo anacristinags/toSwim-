@@ -221,14 +221,14 @@ public class TreinoService : ITreinoService
             QuantidadeRepeticoesPlanejada = dto.QuantidadeRepeticoesPlanejada,
             DistanciaPlanejadaM = dto.DistanciaPlanejadaM,
             TempoPausaSeg = dto.TempoPausaSeg,
-            TempoTotalSeg = dto.TempoTotalSeg,
-            DistanciaTotalM = dto.DistanciaTotalM,
+            TempoTotalSeg = NuloSeZero(dto.TempoTotalSeg),
+            DistanciaTotalM = NuloSeZero(dto.DistanciaTotalM),
             Observacoes = dto.Observacoes
         };
 
-        if (dto.DistanciaTotalM.HasValue && dto.TempoTotalSeg.HasValue && dto.DistanciaTotalM > 0)
+        if (novaSerie.DistanciaTotalM.HasValue && novaSerie.TempoTotalSeg.HasValue)
         {
-            novaSerie.PaceMedioSeg = CalcularPace(dto.DistanciaTotalM.Value, dto.TempoTotalSeg.Value);
+            novaSerie.PaceMedioSeg = CalcularPace(novaSerie.DistanciaTotalM.Value, novaSerie.TempoTotalSeg.Value);
         }
 
         await _serieTreinoRepository.AdicionarAsync(novaSerie);
@@ -273,13 +273,13 @@ public class TreinoService : ITreinoService
         serie.QuantidadeRepeticoesPlanejada = dto.QuantidadeRepeticoesPlanejada;
         serie.DistanciaPlanejadaM = dto.DistanciaPlanejadaM;
         serie.TempoPausaSeg = dto.TempoPausaSeg;
-        serie.TempoTotalSeg = dto.TempoTotalSeg;
-        serie.DistanciaTotalM = dto.DistanciaTotalM;
+        serie.TempoTotalSeg = NuloSeZero(dto.TempoTotalSeg);
+        serie.DistanciaTotalM = NuloSeZero(dto.DistanciaTotalM);
         serie.Observacoes = dto.Observacoes;
 
-        if (dto.DistanciaTotalM.HasValue && dto.TempoTotalSeg.HasValue && dto.DistanciaTotalM > 0)
+        if (serie.DistanciaTotalM.HasValue && serie.TempoTotalSeg.HasValue)
         {
-            serie.PaceMedioSeg = CalcularPace(dto.DistanciaTotalM.Value, dto.TempoTotalSeg.Value);
+            serie.PaceMedioSeg = CalcularPace(serie.DistanciaTotalM.Value, serie.TempoTotalSeg.Value);
         }
         else
         {
@@ -308,6 +308,10 @@ public class TreinoService : ITreinoService
     // ==========================================
     // MAPEARES PRIVADOS
     // ==========================================
+
+    // Serie nao cronometrada: total zerado e tratado como nao informado (o banco exige NULL ou > 0).
+    private static decimal? NuloSeZero(decimal? valor) => valor == 0m ? null : valor;
+    private static int? NuloSeZero(int? valor) => valor == 0 ? null : valor;
 
     private static decimal CalcularPace(int distanciaMetros, decimal tempoSegundos)
     {
